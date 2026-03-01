@@ -31,13 +31,13 @@ services:
       - DATABASE_URL=postgresql+asyncpg://omni:omni_secret@postgres:5432/omni_db
       - ENVIRONMENT=dev
     ports:
-      - "8000:8000"
+      - "8052:8052"
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - ./omni-backend:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8052 --reload
 
   # ── Frontend ────────────────────────────────────────────────────────────────
   frontend:

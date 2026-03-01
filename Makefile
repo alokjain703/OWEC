@@ -60,7 +60,7 @@ help:
 	@echo "    db-shell           Open psql inside the container"
 	@echo ""
 	@echo "  $(GREEN)omni-backend$(RESET)"
-	@echo "    start-backend      Start backend container (port 8000)"
+	@echo "    start-backend      Start backend container (port 8052)"
 	@echo "    stop-backend       Stop backend container"
 	@echo "    restart-backend    Restart backend container"
 	@echo "    logs-backend       Tail backend container logs"
@@ -95,7 +95,7 @@ start:
 	docker compose up -d --build
 	@echo "$(GREEN)✔ All services started$(RESET)"
 	@echo "  DB       → localhost:5483"
-	@echo "  Backend  → http://localhost:8000"
+	@echo "  Backend  → http://localhost:8052"
 	@echo "  Frontend → http://localhost:4252"
 
 stop:
@@ -148,11 +148,9 @@ db-shell:
 # omni-backend  ── start / stop / restart / logs / local dev
 # ══════════════════════════════════════════════════════════════════════════════
 start-backend:
-	@echo "$(CYAN)▶ Starting omni-backend (port 8000)…$(RESET)"
+ @echo "$(CYAN)▶ Starting omni-backend (port 8052)…$(RESET)"
 	docker compose up -d $(SVC_BACKEND)
-	@echo "$(GREEN)✔ omni-backend started → http://localhost:8000$(RESET)"
-
-stop-backend:
+ @echo "$(GREEN)✔ omni-backend started → http://localhost:8052$(RESET)"stop-backend:
 	@echo "$(YELLOW)■ Stopping omni-backend…$(RESET)"
 	docker compose stop $(SVC_BACKEND)
 
@@ -169,10 +167,8 @@ backend-install:
 	cd $(BACKEND_DIR) && pip install -e ".[dev]"
 
 backend-dev:
-	@echo "$(CYAN)▶ Starting FastAPI dev server locally (hot-reload, port 8000)…$(RESET)"
-	cd $(BACKEND_DIR) && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-backend-lint:
+ @echo "$(CYAN)▶ Starting FastAPI dev server locally (hot-reload, port 8052)…$(RESET)"
+	cd $(BACKEND_DIR) && uvicorn app.main:app --reload --host 0.0.0.0 --port 8052backend-lint:
 	@echo "$(CYAN)▶ Running ruff…$(RESET)"
 	cd $(BACKEND_DIR) && python -m ruff check .
 

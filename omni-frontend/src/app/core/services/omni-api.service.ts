@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 const API_BASE = (typeof window !== 'undefined' && (window as any)['__OMNI_API_BASE__'])
-  || 'http://localhost:8000/api/v1';
+  || 'http://localhost:8052/api/v1';
 
 @Injectable({ providedIn: 'root' })
 export class OmniApiService {

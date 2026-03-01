@@ -1,50 +1,169 @@
 /* ============================================================
-   OMNI Global Styles – Angular Material dark theme
+   OMNI Global Styles – multi-theme (Material M2)
    ============================================================ */
 
-// 1. Import Material theming API (available after npm install)
+// 1. Import Material theming API
 @use '@angular/material' as mat;
 
 // 2. Include Material base styles once
 @include mat.core();
 
-// 3. Define a deep-purple / cyan dark palette
-$omni-primary:   mat.m2-define-palette(mat.$m2-deep-purple-palette, 400, 200, 700);
-$omni-accent:    mat.m2-define-palette(mat.$m2-cyan-palette,        400, 200, 700);
-$omni-warn:      mat.m2-define-palette(mat.$m2-red-palette);
+// ── Palette definitions ───────────────────────────────────────
 
-$omni-theme: mat.m2-define-dark-theme((
-  color: (
-    primary: $omni-primary,
-    accent:  $omni-accent,
-    warn:    $omni-warn,
-  ),
-  typography: mat.m2-define-typography-config(
-    $font-family: "'Roboto', 'Segoe UI', system-ui, sans-serif",
-  ),
+// Dark Purple (default)
+$dp-primary: mat.m2-define-palette(mat.$m2-deep-purple-palette, 400, 200, 700);
+$dp-accent:  mat.m2-define-palette(mat.$m2-cyan-palette,        400, 200, 700);
+$dp-warn:    mat.m2-define-palette(mat.$m2-red-palette);
+
+// Dark Indigo
+$di-primary: mat.m2-define-palette(mat.$m2-indigo-palette,  400, 200, 700);
+$di-accent:  mat.m2-define-palette(mat.$m2-amber-palette,   400, 200, 700);
+$di-warn:    mat.m2-define-palette(mat.$m2-red-palette);
+
+// Light Indigo
+$li-primary: mat.m2-define-palette(mat.$m2-indigo-palette,  600, 300, 900);
+$li-accent:  mat.m2-define-palette(mat.$m2-pink-palette,    A200, A100, A400);
+$li-warn:    mat.m2-define-palette(mat.$m2-red-palette);
+
+// Light Teal
+$lt-primary: mat.m2-define-palette(mat.$m2-teal-palette,    600, 300, 900);
+$lt-accent:  mat.m2-define-palette(mat.$m2-orange-palette,  A400, A200, A700);
+$lt-warn:    mat.m2-define-palette(mat.$m2-red-palette);
+
+// Light Pink
+$lp-primary: mat.m2-define-palette(mat.$m2-pink-palette,    400, 200, 700);
+$lp-accent:  mat.m2-define-palette(mat.$m2-purple-palette,  400, 200, 700);
+$lp-warn:    mat.m2-define-palette(mat.$m2-red-palette);
+
+// ── Theme objects ─────────────────────────────────────────────
+$typography: mat.m2-define-typography-config(
+  $font-family: "'Roboto', 'Segoe UI', system-ui, sans-serif",
+);
+
+$theme-dark-purple: mat.m2-define-dark-theme((
+  color: (primary: $dp-primary, accent: $dp-accent, warn: $dp-warn),
+  typography: $typography,
   density: 0,
 ));
 
-// 4. Apply theme to all Material components
-@include mat.all-component-themes($omni-theme);
+$theme-dark-indigo: mat.m2-define-dark-theme((
+  color: (primary: $di-primary, accent: $di-accent, warn: $di-warn),
+  typography: $typography,
+  density: 0,
+));
 
-// 5. OMNI CSS custom properties (mapped to Material palette values)
-:root {
-  --omni-bg:              #0d0d14;
-  --omni-surface:         #161623;
-  --omni-border:          #2a2a45;
-  --omni-accent:          #7c5cbf;
-  --omni-accent-light:    #a384e0;
-  --omni-text:            #e8e8f0;
-  --omni-text-muted:      #7a7a9a;
-  // Node role colours
+$theme-light-indigo: mat.m2-define-light-theme((
+  color: (primary: $li-primary, accent: $li-accent, warn: $li-warn),
+  typography: $typography,
+  density: 0,
+));
+
+$theme-light-teal: mat.m2-define-light-theme((
+  color: (primary: $lt-primary, accent: $lt-accent, warn: $lt-warn),
+  typography: $typography,
+  density: 0,
+));
+
+$theme-light-pink: mat.m2-define-light-theme((
+  color: (primary: $lp-primary, accent: $lp-accent, warn: $lp-warn),
+  typography: $typography,
+  density: 0,
+));
+
+// ── Apply default (dark-purple) globally; others are opt-in ──
+@include mat.all-component-themes($theme-dark-purple);
+
+.theme-dark-indigo  { @include mat.all-component-colors($theme-dark-indigo);  }
+.theme-light-indigo { @include mat.all-component-colors($theme-light-indigo); }
+.theme-light-teal   { @include mat.all-component-colors($theme-light-teal);   }
+.theme-light-pink   { @include mat.all-component-colors($theme-light-pink);   }
+
+// ── CSS custom properties per theme ──────────────────────────
+
+// Default (dark-purple) — also used when .theme-dark-purple is set
+:root,
+body.theme-dark-purple {
+  --omni-bg:           #0d0d14;
+  --omni-surface:      #161623;
+  --omni-border:       #2a2a45;
+  --omni-accent:       #7c5cbf;
+  --omni-accent-light: #a384e0;
+  --omni-text:         #e8e8f0;
+  --omni-text-muted:   #7a7a9a;
+  --omni-hover:        rgba(255,255,255,0.05);
+  --omni-active-bg:    rgba(124,92,191,0.18);
+  // Node colours
   --omni-node-universe:   #3b82f6;
   --omni-node-collection: #8b5cf6;
   --omni-node-major:      #ec4899;
   --omni-node-atomic:     #10b981;
 }
 
-// 6. Global resets
+body.theme-dark-indigo {
+  --omni-bg:           #0b0b18;
+  --omni-surface:      #141428;
+  --omni-border:       #282850;
+  --omni-accent:       #5c6bc0;
+  --omni-accent-light: #9fa8da;
+  --omni-text:         #e0e0f0;
+  --omni-text-muted:   #7070a0;
+  --omni-hover:        rgba(255,255,255,0.05);
+  --omni-active-bg:    rgba(92,107,192,0.20);
+  --omni-node-universe:   #4fc3f7;
+  --omni-node-collection: #7986cb;
+  --omni-node-major:      #f06292;
+  --omni-node-atomic:     #4db6ac;
+}
+
+body.theme-light-indigo {
+  --omni-bg:           #f4f4f8;
+  --omni-surface:      #ffffff;
+  --omni-border:       #d0d0e0;
+  --omni-accent:       #3949ab;
+  --omni-accent-light: #5c6bc0;
+  --omni-text:         #1a1a2e;
+  --omni-text-muted:   #6060a0;
+  --omni-hover:        rgba(0,0,0,0.04);
+  --omni-active-bg:    rgba(57,73,171,0.12);
+  --omni-node-universe:   #1565c0;
+  --omni-node-collection: #4527a0;
+  --omni-node-major:      #ad1457;
+  --omni-node-atomic:     #00695c;
+}
+
+body.theme-light-teal {
+  --omni-bg:           #f0f7f6;
+  --omni-surface:      #ffffff;
+  --omni-border:       #b2dfdb;
+  --omni-accent:       #00695c;
+  --omni-accent-light: #00897b;
+  --omni-text:         #1a2e2b;
+  --omni-text-muted:   #507570;
+  --omni-hover:        rgba(0,0,0,0.04);
+  --omni-active-bg:    rgba(0,105,92,0.12);
+  --omni-node-universe:   #0277bd;
+  --omni-node-collection: #4527a0;
+  --omni-node-major:      #c62828;
+  --omni-node-atomic:     #2e7d32;
+}
+
+body.theme-light-pink {
+  --omni-bg:           #fdf4f7;
+  --omni-surface:      #ffffff;
+  --omni-border:       #f8bbd0;
+  --omni-accent:       #c2185b;
+  --omni-accent-light: #e91e63;
+  --omni-text:         #2e0f1b;
+  --omni-text-muted:   #a05070;
+  --omni-hover:        rgba(0,0,0,0.04);
+  --omni-active-bg:    rgba(194,24,91,0.12);
+  --omni-node-universe:   #1565c0;
+  --omni-node-collection: #7b1fa2;
+  --omni-node-major:      #c62828;
+  --omni-node-atomic:     #2e7d32;
+}
+
+// ── Global resets ─────────────────────────────────────────────
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
@@ -55,9 +174,10 @@ html, body {
   font-size: 14px;
   line-height: 1.5;
   overflow: hidden;
+  transition: background 0.25s ease, color 0.25s ease;
 }
 
-// 7. Override Material surface colours for dark bg
+// ── Material surface overrides ────────────────────────────────
 .mat-drawer-container,
 .mat-sidenav-container { background: var(--omni-bg) !important; }
 
@@ -70,21 +190,50 @@ html, body {
 }
 
 .mat-nav-list .mat-list-item.active-link {
-  background: rgba(124, 92, 191, 0.18);
+  background: var(--omni-active-bg);
   border-left: 3px solid var(--omni-accent);
   color: var(--omni-text) !important;
 }
 
-// 8. MatCard override
+// ── MatCard ───────────────────────────────────────────────────
 .mat-mdc-card {
   background: var(--omni-surface) !important;
   border: 1px solid var(--omni-border);
 }
 
-// 9. SVG inherits font
+// ── Theme picker menu ─────────────────────────────────────────
+.omni-theme-menu {
+  .theme-menu-header {
+    padding: 8px 16px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
+  .theme-group-label {
+    padding: 8px 16px 2px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    opacity: 0.5;
+  }
+  button.theme-active {
+    font-weight: 600;
+  }
+  .check-icon {
+    margin-left: auto;
+    font-size: 18px;
+    height: 18px;
+    width: 18px;
+  }
+}
+
+// ── SVG / D3 ──────────────────────────────────────────────────
 svg text { font-family: 'Roboto', inherit; }
 
-// 10. Scrollbar (Webkit)
+// ── Scrollbar ─────────────────────────────────────────────────
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--omni-bg); }
 ::-webkit-scrollbar-thumb { background: var(--omni-border); border-radius: 3px; }

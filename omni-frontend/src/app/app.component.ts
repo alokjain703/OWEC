@@ -9,6 +9,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
+import { ThemeService } from './core/services/theme.service';
+import { ThemeSwitcherComponent } from './theme-switcher.component';
 
 interface NavItem {
   path: string;
@@ -24,6 +26,7 @@ interface NavItem {
     RouterOutlet, RouterLink, RouterLinkActive,
     MatSidenavModule, MatToolbarModule, MatListModule,
     MatIconModule, MatButtonModule, MatTooltipModule, MatDividerModule,
+    ThemeSwitcherComponent,
   ],
   template: `
     <mat-sidenav-container class="omni-container">
@@ -75,6 +78,7 @@ interface NavItem {
           </button>
           <span class="toolbar-title">OMNI – Narrative Engine</span>
           <span class="toolbar-spacer"></span>
+          <omni-theme-switcher />
           <button mat-icon-button matTooltip="Settings (coming soon)" aria-label="Settings">
             <mat-icon>settings</mat-icon>
           </button>
@@ -166,6 +170,8 @@ interface NavItem {
 })
 export class AppComponent {
   private bp = inject(BreakpointObserver);
+  // Inject ThemeService here so its effect() runs at app startup
+  private themeSvc = inject(ThemeService);
 
   isMobile = signal(false);
   sidenavOpen = signal(true);
