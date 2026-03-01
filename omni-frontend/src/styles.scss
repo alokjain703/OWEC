@@ -1,0 +1,90 @@
+/* ============================================================
+   OMNI Global Styles – Angular Material dark theme
+   ============================================================ */
+
+// 1. Import Material theming API (available after npm install)
+@use '@angular/material' as mat;
+
+// 2. Include Material base styles once
+@include mat.core();
+
+// 3. Define a deep-purple / cyan dark palette
+$omni-primary:   mat.m2-define-palette(mat.$m2-deep-purple-palette, 400, 200, 700);
+$omni-accent:    mat.m2-define-palette(mat.$m2-cyan-palette,        400, 200, 700);
+$omni-warn:      mat.m2-define-palette(mat.$m2-red-palette);
+
+$omni-theme: mat.m2-define-dark-theme((
+  color: (
+    primary: $omni-primary,
+    accent:  $omni-accent,
+    warn:    $omni-warn,
+  ),
+  typography: mat.m2-define-typography-config(
+    $font-family: "'Roboto', 'Segoe UI', system-ui, sans-serif",
+  ),
+  density: 0,
+));
+
+// 4. Apply theme to all Material components
+@include mat.all-component-themes($omni-theme);
+
+// 5. OMNI CSS custom properties (mapped to Material palette values)
+:root {
+  --omni-bg:              #0d0d14;
+  --omni-surface:         #161623;
+  --omni-border:          #2a2a45;
+  --omni-accent:          #7c5cbf;
+  --omni-accent-light:    #a384e0;
+  --omni-text:            #e8e8f0;
+  --omni-text-muted:      #7a7a9a;
+  // Node role colours
+  --omni-node-universe:   #3b82f6;
+  --omni-node-collection: #8b5cf6;
+  --omni-node-major:      #ec4899;
+  --omni-node-atomic:     #10b981;
+}
+
+// 6. Global resets
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--omni-bg);
+  color: var(--omni-text);
+  font-family: 'Roboto', 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+// 7. Override Material surface colours for dark bg
+.mat-drawer-container,
+.mat-sidenav-container { background: var(--omni-bg) !important; }
+
+.mat-sidenav { background: var(--omni-surface) !important; }
+
+.mat-toolbar.omni-toolbar {
+  background: var(--omni-surface);
+  border-bottom: 1px solid var(--omni-border);
+  color: var(--omni-text);
+}
+
+.mat-nav-list .mat-list-item.active-link {
+  background: rgba(124, 92, 191, 0.18);
+  border-left: 3px solid var(--omni-accent);
+  color: var(--omni-text) !important;
+}
+
+// 8. MatCard override
+.mat-mdc-card {
+  background: var(--omni-surface) !important;
+  border: 1px solid var(--omni-border);
+}
+
+// 9. SVG inherits font
+svg text { font-family: 'Roboto', inherit; }
+
+// 10. Scrollbar (Webkit)
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--omni-bg); }
+::-webkit-scrollbar-thumb { background: var(--omni-border); border-radius: 3px; }

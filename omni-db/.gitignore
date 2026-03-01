@@ -1,0 +1,13 @@
+# ── PostgreSQL data volume ────────────────────────────────────
+# Docker named volume is managed by Docker; nothing to ignore here.
+
+# ── Environment & secrets ─────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── OS & Editor ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,33 @@
+# ── Dependencies ─────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ── pnpm ─────────────────────────────────────────────────────
+# Lock file IS committed (ensures reproducible installs)
+# pnpm-lock.yaml  ← intentionally NOT ignored
+
+# ── Build output ─────────────────────────────────────────────
+dist/
+dist-server/
+
+# ── Angular cache ────────────────────────────────────────────
+.angular/
+
+# ── Test coverage ────────────────────────────────────────────
+coverage/
+
+# ── Environment & secrets ────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── OS & Editor ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# ── Karma / Jasmine ──────────────────────────────────────────
+karma-results/

@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: omni-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "5483:5432"
+    volumes:
+      - omni_pgdata:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d
+
+volumes:
+  omni_pgdata:

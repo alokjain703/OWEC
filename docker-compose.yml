@@ -1,0 +1,57 @@
+services:
+
+  # ── Database ────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: omni-postgres
+    restart: unless-stopped
+    env_file:
+      - ./omni-db/.env
+    ports:
+      - "5483:5432"
+    volumes:
+      - omni_pgdata:/var/lib/postgresql/data
+      - ./omni-db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U omni -d omni_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend ─────────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./omni-backend
+      dockerfile: Dockerfile
+    container_name: omni-backend
+    restart: unless-stopped
+    env_file:
+      - ./omni-backend/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://omni:omni_secret@postgres:5432/omni_db
+      - ENVIRONMENT=dev
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./omni-backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ── Frontend ────────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./omni-frontend
+      dockerfile: Dockerfile
+    container_name: omni-frontend
+    restart: unless-stopped
+    ports:
+      - "4252:4252"
+    depends_on:
+      - backend
+    environment:
+      - NODE_ENV=development
+
+volumes:
+  omni_pgdata:
