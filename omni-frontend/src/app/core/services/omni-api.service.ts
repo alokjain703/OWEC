@@ -1,14 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import {
-  Workspace,
-  WorkspaceCreate,
-  WorkspaceUpdate,
-  WorkspaceMember,
-  WorkspaceMemberAdd,
-} from '../models/workspace.model';
-import { Project, ProjectCreate, ProjectUpdate } from '../models/project.model';
 
 const API_BASE = (typeof window !== 'undefined' && (window as any)['__OMNI_API_BASE__'])
   || 'http://localhost:8052/api/v1';
@@ -18,75 +10,6 @@ export class OmniApiService {
   private readonly base = API_BASE;
 
   constructor(private http: HttpClient) {}
-
-  private getHeaders(): HttpHeaders {
-    const userId = localStorage.getItem('omni_user_id');
-    return new HttpHeaders(userId ? { 'X-User-Id': userId } : {});
-  }
-
-  // ── Workspaces ──────────────────────────────────────────────────────────────
-  listWorkspaces(): Observable<Workspace[]> {
-    return this.http.get<Workspace[]>(`${this.base}/workspaces`, { headers: this.getHeaders() });
-  }
-  getWorkspace(id: string): Observable<Workspace> {
-    return this.http.get<Workspace>(`${this.base}/workspaces/${id}`, { headers: this.getHeaders() });
-  }
-  createWorkspace(payload: WorkspaceCreate): Observable<Workspace> {
-    return this.http.post<Workspace>(`${this.base}/workspaces`, payload, { headers: this.getHeaders() });
-  }
-  updateWorkspace(id: string, payload: WorkspaceUpdate): Observable<Workspace> {
-    return this.http.patch<Workspace>(`${this.base}/workspaces/${id}`, payload, { headers: this.getHeaders() });
-  }
-  deleteWorkspace(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.base}/workspaces/${id}`, { headers: this.getHeaders() });
-  }
-  addWorkspaceMember(workspaceId: string, payload: WorkspaceMemberAdd): Observable<WorkspaceMember> {
-    return this.http.post<WorkspaceMember>(
-      `${this.base}/workspaces/${workspaceId}/members`,
-      payload,
-      { headers: this.getHeaders() }
-    );
-  }
-  removeWorkspaceMember(workspaceId: string, userId: string): Observable<void> {
-    return this.http.delete<void>(
-      `${this.base}/workspaces/${workspaceId}/members/${userId}`,
-      { headers: this.getHeaders() }
-    );
-  }
-
-  // ── Projects ────────────────────────────────────────────────────────────────
-  listProjects(workspaceId: string): Observable<Project[]> {
-    return this.http.get<Project[]>(
-      `${this.base}/workspaces/${workspaceId}/projects`,
-      { headers: this.getHeaders() }
-    );
-  }
-  getProject(workspaceId: string, projectId: string): Observable<Project> {
-    return this.http.get<Project>(
-      `${this.base}/workspaces/${workspaceId}/projects/${projectId}`,
-      { headers: this.getHeaders() }
-    );
-  }
-  createProject(workspaceId: string, payload: ProjectCreate): Observable<Project> {
-    return this.http.post<Project>(
-      `${this.base}/workspaces/${workspaceId}/projects`,
-      payload,
-      { headers: this.getHeaders() }
-    );
-  }
-  updateProject(workspaceId: string, projectId: string, payload: ProjectUpdate): Observable<Project> {
-    return this.http.patch<Project>(
-      `${this.base}/workspaces/${workspaceId}/projects/${projectId}`,
-      payload,
-      { headers: this.getHeaders() }
-    );
-  }
-  deleteProject(workspaceId: string, projectId: string): Observable<void> {
-    return this.http.delete<void>(
-      `${this.base}/workspaces/${workspaceId}/projects/${projectId}`,
-      { headers: this.getHeaders() }
-    );
-  }
 
   // ── Tree ────────────────────────────────────────────────────────────────────
   createNode(payload: unknown): Observable<unknown> {

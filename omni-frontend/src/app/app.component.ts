@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -10,9 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { ThemeService } from './core/services/theme.service';
-import { WorkspaceService } from './core/services/workspace.service';
 import { ThemeSwitcherComponent } from './theme-switcher.component';
-import { WorkspaceSelectorComponent } from './workspace-selector.component';
 
 interface NavItem {
   path: string;
@@ -29,7 +27,6 @@ interface NavItem {
     MatSidenavModule, MatToolbarModule, MatListModule,
     MatIconModule, MatButtonModule, MatTooltipModule, MatDividerModule,
     ThemeSwitcherComponent,
-    WorkspaceSelectorComponent,
   ],
   template: `
     <mat-sidenav-container class="omni-container">
@@ -52,7 +49,7 @@ interface NavItem {
 
         <!-- Navigation -->
         <mat-nav-list class="omni-nav-list">
-          @for (item of navItems(); track item.path) {
+          @for (item of navItems; track item.path) {
             <a
               mat-list-item
               [routerLink]="item.path"
@@ -81,7 +78,6 @@ interface NavItem {
           </button>
           <span class="toolbar-title">OMNI – Narrative Engine</span>
           <span class="toolbar-spacer"></span>
-          <omni-workspace-selector />
           <omni-theme-switcher />
           <button mat-icon-button matTooltip="Settings (coming soon)" aria-label="Settings">
             <mat-icon>settings</mat-icon>
@@ -174,26 +170,20 @@ interface NavItem {
 })
 export class AppComponent {
   private bp = inject(BreakpointObserver);
+  // Inject ThemeService here so its effect() runs at app startup
   private themeSvc = inject(ThemeService);
-  workspaceSvc = inject(WorkspaceService);
 
   isMobile = signal(false);
   sidenavOpen = signal(true);
   sidenavMode = signal<'side' | 'over'>('side');
 
-  // Compute nav items with workspace context when available
-  navItems = computed<NavItem[]>(() => {
-    const workspaceId = this.workspaceSvc.activeWorkspaceId();
-    const basePath = workspaceId ? `/workspace/${workspaceId}` : '';
-    
-    return [
-      { path: `${basePath}/tree`,       label: 'Tree',       icon: 'account_tree', tooltip: 'Project node tree' },
-      { path: `${basePath}/characters`, label: 'Characters',  icon: 'people',       tooltip: 'Character entity map' },
-      { path: `${basePath}/timeline`,   label: 'Timeline',    icon: 'timeline',     tooltip: 'Chronological events' },
-      { path: `${basePath}/graph`,      label: 'Graph',       icon: 'hub',          tooltip: 'Relationship graph' },
-      { path: `${basePath}/schemas`,    label: 'Schemas',     icon: 'schema',       tooltip: 'Bible / writing schemas' },
-    ];
-  });
+  navItems: NavItem[] = [
+    { path: '/tree',       label: 'Tree',       icon: 'account_tree', tooltip: 'Project node tree' },
+    { path: '/characters', label: 'Characters',  icon: 'people',       tooltip: 'Character entity map' },
+    { path: '/timeline',   label: 'Timeline',    icon: 'timeline',     tooltip: 'Chronological events' },
+    { path: '/graph',      label: 'Graph',       icon: 'hub',          tooltip: 'Relationship graph' },
+    { path: '/schemas',    label: 'Schemas',     icon: 'schema',       tooltip: 'Bible / writing schemas' },
+  ];
 
   constructor() {
     this.bp.observe([Breakpoints.Handset])
