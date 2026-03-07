@@ -1,7 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { CommonModule } from '@angular/common';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatListModule } from '@angular/material/list';
@@ -9,8 +10,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatMenuModule } from '@angular/material/menu';
 import { ThemeService } from './core/services/theme.service';
 import { ThemeSwitcherComponent } from './theme-switcher.component';
+import { AuthStateService } from './core/services/auth-state.service';
+import { AuthService } from './core/services/auth.service';
 
 interface NavItem {
   path: string;
@@ -23,9 +27,10 @@ interface NavItem {
   selector: 'omni-root',
   standalone: true,
   imports: [
+    CommonModule,
     RouterOutlet, RouterLink, RouterLinkActive,
     MatSidenavModule, MatToolbarModule, MatListModule,
-    MatIconModule, MatButtonModule, MatTooltipModule, MatDividerModule,
+    MatIconModule, MatButtonModule, MatTooltipModule, MatDividerModule, MatMenuModule,
     ThemeSwitcherComponent,
   ],
   template: `
@@ -79,6 +84,41 @@ interface NavItem {
           <span class="toolbar-title">OMNI – Narrative Engine</span>
           <span class="toolbar-spacer"></span>
           <omni-theme-switcher />
+          
+          @if (currentUser$ | async; as currentUser) {
+            <!-- User Menu -->
+            <button mat-button [matMenuTriggerFor]="userMenu" class="user-menu-button">
+              <mat-icon>account_circle</mat-icon>
+              <span class="user-name">{{ currentUser.display_name }}</span>
+              <mat-icon class="dropdown-icon">arrow_drop_down</mat-icon>
+            </button>
+            <mat-menu #userMenu="matMenu" class="user-menu">
+              <div class="user-info" mat-menu-item disabled>
+                <div class="user-email">{{ currentUser.email }}</div>
+                <div class="user-tenant">Tenant: {{ currentUser.tenant_id.substring(0, 8) }}...</div>
+              </div>
+              <mat-divider></mat-divider>
+              <button mat-menu-item (click)="navigateToProfile()">
+                <mat-icon>person</mat-icon>
+                <span>My Profile</span>
+              </button>
+              <button mat-menu-item (click)="navigateToSettings()">
+                <mat-icon>settings</mat-icon>
+                <span>Account Settings</span>
+              </button>
+              <mat-divider></mat-divider>
+              <button mat-menu-item (click)="logout()">
+                <mat-icon>logout</mat-icon>
+                <span>Sign Out</span>
+              </button>
+            </mat-menu>
+          } @else {
+            <button mat-raised-button color="accent" (click)="login()">
+              <mat-icon>login</mat-icon>
+              Sign In
+            </button>
+          }
+          
           <button mat-icon-button matTooltip="Settings (coming soon)" aria-label="Settings">
             <mat-icon>settings</mat-icon>
           </button>
@@ -159,6 +199,29 @@ interface NavItem {
       color: var(--omni-text);
     }
     .toolbar-spacer { flex: 1; }
+    
+    /* User menu button */
+    .user-menu-button {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      margin-left: 8px;
+      border-radius: 24px;
+      transition: background-color 0.2s;
+    }
+    .user-menu-button:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+    .user-name {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .dropdown-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
 
     /* ── Content area ── */
     .omni-content { background: var(--omni-bg); }
@@ -170,12 +233,19 @@ interface NavItem {
 })
 export class AppComponent {
   private bp = inject(BreakpointObserver);
+  private router = inject(Router);
+  private authState = inject(AuthStateService);
+  private authService = inject(AuthService);
   // Inject ThemeService here so its effect() runs at app startup
   private themeSvc = inject(ThemeService);
 
   isMobile = signal(false);
   sidenavOpen = signal(true);
   sidenavMode = signal<'side' | 'over'>('side');
+  
+  // Auth observables
+  currentUser$ = this.authState.currentUser$;
+  isAuthenticated$ = this.authState.isAuthenticated$;
 
   navItems: NavItem[] = [
     { path: '/tree',       label: 'Tree',       icon: 'account_tree', tooltip: 'Project node tree' },
@@ -193,6 +263,27 @@ export class AppComponent {
         this.sidenavMode.set(result.matches ? 'over' : 'side');
         this.sidenavOpen.set(!result.matches);
       });
+      
+    // Check auth state on app init
+    this.authState.refresh();
+  }
+  
+  login(): void {
+    this.authService.redirectToLogin();
+  }
+  
+  logout(): void {
+    this.authState.logout();
+    // Optionally redirect to login
+    this.authService.redirectToLogin();
+  }
+  
+  navigateToProfile(): void {
+    this.router.navigate(['/profile']);
+  }
+  
+  navigateToSettings(): void {
+    this.router.navigate(['/settings']);
   }
 }
 

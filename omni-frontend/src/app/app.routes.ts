@@ -33,5 +33,12 @@ export const routes: Routes = [
         (m) => m.SCHEMA_ROUTES
       ),
   },
+  {
+    path: 'auth/callback',
+    loadComponent: () =>
+      import('./features/auth/auth-callback.component').then(
+        (m) => m.AuthCallbackComponent
+      ),
+  },
   { path: '**', redirectTo: 'tree' },
 ];
