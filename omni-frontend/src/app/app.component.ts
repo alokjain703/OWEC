@@ -269,13 +269,23 @@ export class AppComponent {
   }
   
   login(): void {
-    this.authService.redirectToLogin();
+    // Always clear RAMPS session to ensure fresh login
+    this.authService.redirectToLogin(true);
   }
   
   logout(): void {
+    // Call RAMPS logout API (fire and forget - don't wait for response)
+    // This allows RAMPS to clean up server-side sessions if needed
+    this.authService.logout().subscribe({
+      next: () => console.log('Logged out from RAMPS'),
+      error: (err) => console.warn('RAMPS logout endpoint not available:', err)
+    });
+    
+    // Clear local authentication state
     this.authState.logout();
-    // Optionally redirect to login
-    this.authService.redirectToLogin();
+    
+    // Stay on OWEC - user will see Sign In button
+    // RAMPS session will be cleared on next login
   }
   
   navigateToProfile(): void {

@@ -26,9 +26,10 @@ export class AuthService {
   /**
    * Redirect to RAMPS login page
    */
-  redirectToLogin(): void {
+  redirectToLogin(clearSession = false): void {
     const returnUrl = encodeURIComponent(`${environment.omniBaseUrl}/auth/callback`);
-    window.location.href = `${environment.rampsLoginUrl}?returnUrl=${returnUrl}`;
+    const clearParam = clearSession ? '&clearSession=true' : '';
+    window.location.href = `${environment.rampsLoginUrl}?returnUrl=${returnUrl}${clearParam}`;
   }
 
   /**
