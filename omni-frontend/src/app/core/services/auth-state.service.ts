@@ -107,7 +107,9 @@ export class AuthStateService {
    */
   public getToken(): string | null {
     const token = this.authStateSubject.value.token;
-    console.log('[AuthState] getToken() called, has token:', !!token);
+    const tokenFromStorage = localStorage.getItem('access_token');
+    console.log('[AuthState] getToken() - from state:', !!token, 'from localStorage:', !!tokenFromStorage);
+    console.log('[AuthState] Token first 20 chars:', token ? token.substring(0, 20) + '...' : 'NULL');
     return token;
   }
 
@@ -116,6 +118,7 @@ export class AuthStateService {
    */
   public login(token: string, user: UserInfo): void {
     console.log('[AuthState] login() called, saving token and user:', { email: user.email });
+    console.log('[AuthState] Token to save (first 20):', token.substring(0, 20) + '...');
     
     // Save to localStorage
     localStorage.setItem('access_token', token);
@@ -130,7 +133,10 @@ export class AuthStateService {
     
     this.authStateSubject.next(newState);
     
-    console.log('[AuthState] Token saved, isAuthenticated:', this.isAuthenticated());
+    console.log('[AuthState] Token saved to state and localStorage');
+    console.log('[AuthState] Verify - isAuthenticated:', this.isAuthenticated());
+    console.log('[AuthState] Verify - token from state:', !!this.authStateSubject.value.token);
+    console.log('[AuthState] Verify - token from localStorage:', !!localStorage.getItem('access_token'));
   }
 
   /**

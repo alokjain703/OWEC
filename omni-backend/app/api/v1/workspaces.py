@@ -31,14 +31,30 @@ def get_user_id_from_token(authorization: str = Header(...)) -> UUID:
         # Placeholder: extract from token
         # In reality: decode JWT, validate, extract user_id
         import jwt
+        
+        logger.info(f"[Backend] Received Authorization header: {authorization[:50]}...")
+        
         token = authorization.replace("Bearer ", "")
+        logger.info(f"[Backend] Token after removing Bearer: {token[:50]}...")
+        
         # Decode without verification for now (should verify in production)
         payload = jwt.decode(token, options={"verify_signature": False})
-        user_id = UUID(payload.get("sub") or payload.get("user_id"))
+        logger.info(f"[Backend] Decoded JWT payload: {payload}")
+        
+        # Try to get user_id from various possible fields
+        user_id_str = payload.get("sub") or payload.get("user_id") or payload.get("id")
+        logger.info(f"[Backend] Extracted user_id string: {user_id_str}")
+        
+        if not user_id_str:
+            logger.error(f"[Backend] No user_id found in token payload: {payload}")
+            raise HTTPException(status_code=401, detail="No user_id in token")
+        
+        user_id = UUID(user_id_str)
+        logger.info(f"[Backend] Successfully extracted user_id: {user_id}")
         return user_id
     except Exception as e:
-        logger.error(f"Error extracting user_id from token: {e}")
-        raise HTTPException(status_code=401, detail="Invalid authentication token")
+        logger.error(f"[Backend] Error extracting user_id from token: {e}", exc_info=True)
+        raise HTTPException(status_code=401, detail=f"Invalid authentication token: {str(e)}")
 
 
 @router.post("/sync", response_model=SyncWorkspacesResponse)

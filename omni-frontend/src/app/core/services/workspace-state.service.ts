@@ -51,17 +51,21 @@ export class WorkspaceStateService {
    * Load and sync workspaces from backend
    */
   async loadWorkspaces(forceSync: boolean = false): Promise<void> {
+    console.log('[WorkspaceState] loadWorkspaces() called, forceSync:', forceSync);
     this._isLoading.set(true);
     this._error.set(null);
 
     try {
       // Sync from RAMPS if needed
       if (forceSync) {
+        console.log('[WorkspaceState] Syncing from RAMPS...');
         await firstValueFrom(this.workspaceService.syncWorkspaces(true));
       }
 
       // Load cached workspaces
+      console.log('[WorkspaceState] Fetching workspaces from backend...');
       const workspaces = await firstValueFrom(this.workspaceService.getUserWorkspaces());
+      console.log('[WorkspaceState] Received', workspaces.length, 'workspaces');
       this._workspaces.set(workspaces);
 
       // If no current workspace selected but we have workspaces, select the first one

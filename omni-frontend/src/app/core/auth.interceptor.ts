@@ -7,7 +7,13 @@ import { AuthStateService } from './services/auth-state.service';
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authState = inject(AuthStateService);
-  const token = authState.getToken();
+  let token = authState.getToken();
+
+  // Fallback: if state doesn't have token, try localStorage directly
+  if (!token) {
+    token = localStorage.getItem('access_token');
+    console.log('[AuthInterceptor] Token not in state, checking localStorage directly:', !!token);
+  }
 
   console.log('[AuthInterceptor] Request to:', req.url, 'Has token:', !!token);
 

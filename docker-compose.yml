@@ -30,6 +30,7 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://omni:omni_secret@postgres:5432/omni_db
       - ENVIRONMENT=dev
+      - RAMPS_API_URL=http://host.docker.internal:8051/api
     ports:
       - "8052:8052"
     depends_on:
@@ -38,6 +39,8 @@ services:
     volumes:
       - ./omni-backend:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8052 --reload
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # ── Frontend ────────────────────────────────────────────────────────────────
   frontend:
