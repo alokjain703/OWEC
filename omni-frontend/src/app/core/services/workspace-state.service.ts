@@ -66,6 +66,34 @@ export class WorkspaceStateService {
       console.log('[WorkspaceState] Fetching workspaces from backend...');
       const workspaces = await firstValueFrom(this.workspaceService.getUserWorkspaces());
       console.log('[WorkspaceState] Received', workspaces.length, 'workspaces');
+      console.log('[WorkspaceState] Raw workspaces data:', JSON.stringify(workspaces, null, 2));
+      
+      try {
+        // Log workspace details including projects
+        console.log('[WorkspaceState] Starting to iterate workspaces...');
+        for (let idx = 0; idx < workspaces.length; idx++) {
+          const ws = workspaces[idx];
+          console.log(`[WorkspaceState] Workspace ${idx + 1}:`, ws);
+          console.log(`[WorkspaceState]   - Name: "${ws.name}"`);
+          console.log(`[WorkspaceState]   - ID: ${ws.id}`);
+          console.log(`[WorkspaceState]   - Projects property exists:`, 'projects' in ws);
+          console.log(`[WorkspaceState]   - Projects value:`, ws.projects);
+          console.log(`[WorkspaceState]   - Projects count: ${ws.projects?.length || 0}`);
+          
+          if (ws.projects && ws.projects.length > 0) {
+            for (let projIdx = 0; projIdx < ws.projects.length; projIdx++) {
+              const proj = ws.projects[projIdx];
+              console.log(`[WorkspaceState]     Project ${projIdx + 1}: "${proj.name}" (ID: ${proj.id})`);
+            }
+          } else {
+            console.log(`[WorkspaceState]     No projects in this workspace`);
+          }
+        }
+        console.log('[WorkspaceState] Finished iterating workspaces');
+      } catch (err) {
+        console.error('[WorkspaceState] Error while logging workspace details:', err);
+      }
+      
       this._workspaces.set(workspaces);
 
       // If no current workspace selected but we have workspaces, select the first one

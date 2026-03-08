@@ -98,11 +98,14 @@ async def get_user_workspaces(
     try:
         service = WorkspaceSyncService(db)
         workspaces = await service.get_user_workspaces(user_id)
+        logger.info(f"[GET /workspaces] Found {len(workspaces)} workspaces for user {user_id}")
         
         # Fetch projects for each workspace
         result = []
         for workspace in workspaces:
             projects = await service.get_workspace_projects(workspace.id)
+            logger.info(f"[GET /workspaces] Workspace '{workspace.name}' (ID: {workspace.id}) has {len(projects)} projects")
+            
             workspace_dict = {
                 "id": workspace.id,
                 "name": workspace.name,
@@ -116,8 +119,10 @@ async def get_user_workspaces(
                     ProjectCacheOut.model_validate(p) for p in projects
                 ]
             }
+            logger.info(f"[GET /workspaces] Constructed workspace_dict with {len(workspace_dict['projects'])} projects")
             result.append(WorkspaceWithProjects(**workspace_dict))
         
+        logger.info(f"[GET /workspaces] Returning {len(result)} workspaces with projects")
         return result
     except Exception as e:
         logger.error(f"Error fetching workspaces: {e}")

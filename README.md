@@ -4,6 +4,33 @@
 
 ---
 
+## Integration with RAMPS
+
+Omni integrates with RAMPS (Resources, Authorization, Management, Policies, Subscriptions) for authentication and workspace management. The organizational hierarchy is:
+
+```
+RAMPS Tenant (organization/customer)
+  └── RAMPS Workspace (logical grouping)
+        └── RAMPS Project (work unit)
+              └── OMNI Project (narrative/writing data)
+```
+
+### Data Synchronization
+
+- **Workspace Cache**: Omni caches workspace metadata from RAMPS in `workspace_cache` table
+- **Project Cache**: Omni caches project metadata from RAMPS in `project_cache` table
+- **User Access**: User-workspace relationships are synced via `user_workspace_access` table
+- **Detailed Project Data**: While RAMPS stores project metadata, Omni stores the actual narrative content (nodes, entities, events, edges, schemas) in its own tables, linked by project ID
+
+### Key Tables
+
+- `workspace_cache`: Cached RAMPS workspace data (id, name, description, type, status)
+- `project_cache`: Cached RAMPS project data (id, workspace_id, name, description, type)
+- `projects`: Omni's core project table with detailed narrative structure
+- `nodes`, `entities`, `events`, `edges`: Narrative content linked to projects
+
+---
+
 ## Architecture
 
 ```
