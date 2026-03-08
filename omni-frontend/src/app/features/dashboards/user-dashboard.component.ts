@@ -569,13 +569,17 @@ export class UserDashboardComponent implements OnInit {
   selectProject(workspace: WorkspaceWithProjects, project: ProjectCacheDto): void {
     this.workspaceState.setCurrentWorkspace(workspace);
     this.workspaceState.setCurrentProject(project);
-    this.router.navigate(['/projects', project.id, 'tree']);
+    this.router.navigate(['/projects', project.id, 'tree'], { 
+      queryParams: { projectName: project.name } 
+    });
   }
 
   openCurrentProject(): void {
     const project = this.workspaceState.currentProject();
     if (project) {
-      this.router.navigate(['/projects', project.id, 'tree']);
+      this.router.navigate(['/projects', project.id, 'tree'], { 
+        queryParams: { projectName: project.name } 
+      });
     }
   }
 

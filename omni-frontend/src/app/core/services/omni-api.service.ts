@@ -11,6 +11,23 @@ export class OmniApiService {
 
   constructor(private http: HttpClient) {}
 
+  // ── Projects ────────────────────────────────────────────────────────────────
+  getProject(id: string): Observable<unknown> {
+    return this.http.get(`${this.base}/projects/${id}`);
+  }
+  createProject(payload: unknown): Observable<unknown> {
+    return this.http.post(`${this.base}/projects`, payload);
+  }
+  updateProject(id: string, payload: unknown): Observable<unknown> {
+    return this.http.patch(`${this.base}/projects/${id}`, payload);
+  }
+  deleteProject(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/projects/${id}`);
+  }
+  getProjectNodes(projectId: string): Observable<unknown[]> {
+    return this.http.get<unknown[]>(`${this.base}/projects/${projectId}/nodes`);
+  }
+
   // ── Tree ────────────────────────────────────────────────────────────────────
   createNode(payload: unknown): Observable<unknown> {
     return this.http.post(`${this.base}/tree/nodes`, payload);

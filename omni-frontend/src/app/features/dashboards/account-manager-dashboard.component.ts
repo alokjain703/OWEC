@@ -475,7 +475,9 @@ export class AccountManagerDashboardComponent implements OnInit {
     this.workspaceState.setCurrentProject(project);
     
     // Navigate to project tree
-    this.router.navigate(['/projects', project.id, 'tree']);
+    this.router.navigate(['/projects', project.id, 'tree'], { 
+      queryParams: { projectName: project.name } 
+    });
   }
 
   isCurrentProject(projectId: string): boolean {

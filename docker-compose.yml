@@ -31,6 +31,7 @@ services:
       - DATABASE_URL=postgresql+asyncpg://omni:omni_secret@postgres:5432/omni_db
       - ENVIRONMENT=dev
       - RAMPS_API_URL=http://host.docker.internal:8051/api
+      - CORS_ORIGINS=["http://localhost:4252","http://127.0.0.1:4252"]
     ports:
       - "8052:8052"
     depends_on:

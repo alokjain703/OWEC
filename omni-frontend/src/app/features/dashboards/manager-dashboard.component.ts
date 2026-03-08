@@ -487,7 +487,10 @@ export class ManagerDashboardComponent implements OnInit {
   selectProject(workspace: WorkspaceWithProjects, project: ProjectCacheDto): void {
     this.workspaceState.setCurrentWorkspace(workspace);
     this.workspaceState.setCurrentProject(project);
-    this.router.navigate(['/projects', project.id, 'tree']);
+    console.log(`[ManagerDashboard] Selected project: ${project.name} (ID: ${project.id}) in workspace: ${workspace.name}`);
+    this.router.navigate(['/projects', project.id, 'tree'], { 
+      queryParams: { projectName: project.name } 
+    });
   }
 
   isCurrentProject(projectId: string): boolean {

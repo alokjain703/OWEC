@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class ProjectCreate(BaseModel):
+    id: uuid.UUID
     owner_id: uuid.UUID
     title: str
     active_schema_id: Optional[uuid.UUID] = None
