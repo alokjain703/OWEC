@@ -174,5 +174,6 @@ CREATE TABLE IF NOT EXISTS schemas (
     name        TEXT        NOT NULL,
     version     INT         NOT NULL DEFAULT 1,
     definition  JSONB       NOT NULL,
-    created_at  TIMESTAMPTZ DEFAULT now()
+    created_at  TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(name, version)
 );

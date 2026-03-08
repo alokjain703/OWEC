@@ -33,7 +33,14 @@ async def create_schema(
     payload: SchemaCreate,
     svc: SchemaService = Depends(get_service),
 ):
-    return await svc.create_schema(payload)
+    try:
+        return await svc.create_schema(
+            payload, 
+            base_schema_id=payload.base_schema_id,
+            is_new_version=payload.is_new_version
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/upload", response_model=SchemaOut, status_code=status.HTTP_201_CREATED,

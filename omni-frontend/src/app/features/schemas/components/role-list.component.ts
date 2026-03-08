@@ -1,4 +1,4 @@
-import { Component, input, output, signal } from '@angular/core';
+import { Component, input, output, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
@@ -199,6 +199,18 @@ export class RoleListComponent {
   // Computed
   roles = () => this.schema().roles;
   roleKeys = () => Object.keys(this.schema().roles);
+
+  constructor() {
+    // Sync selectedRolesArray with selectedRole input
+    effect(() => {
+      const role = this.selectedRole();
+      if (role) {
+        this.selectedRolesArray = [role];
+      } else {
+        this.selectedRolesArray = [];
+      }
+    });
+  }
 
   toggleAddRole(): void {
     this.showAddRole.set(!this.showAddRole());

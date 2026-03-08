@@ -2,7 +2,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, func
+from sqlalchemy import DateTime, Integer, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -11,6 +11,9 @@ from app.db.session import Base
 
 class NarrativeSchema(Base):
     __tablename__ = "schemas"
+    __table_args__ = (
+        UniqueConstraint('name', 'version', name='uq_schema_name_version'),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

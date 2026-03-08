@@ -1,7 +1,9 @@
-import { Component, input, output, signal, computed, InputSignal } from '@angular/core';
+import { Component, input, output, signal, computed, InputSignal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Schema, DEFAULT_SCHEMA, SchemaValidator, RoleDefinition } from '../models/schema.model';
 import { RoleListComponent } from './role-list.component';
@@ -25,8 +27,10 @@ import { MetadataEditorComponent } from './metadata-editor.component';
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatButtonModule,
     MatIconModule,
+    MatTabsModule,
     MatSnackBarModule,
     RoleListComponent,
     RoleEditorComponent,
@@ -68,8 +72,11 @@ import { MetadataEditorComponent } from './metadata-editor.component';
         </div>
       </div>
 
-      <!-- Three-panel layout -->
-      <div class="schema-editor-panels">
+      <!-- Tab View -->
+      <mat-tab-group class="schema-editor-tabs" [(selectedIndex)]="selectedTabIndex">
+        <!-- GUI Editor Tab -->
+        <mat-tab label="GUI Editor">
+          <div class="schema-editor-panels">
         <!-- Left: Role List -->
         <div class="panel panel-left">
           <omni-role-list
@@ -99,7 +106,38 @@ import { MetadataEditorComponent } from './metadata-editor.component';
             (metadataUpdated)="onMetadataUpdated($event)">
           </omni-metadata-editor>
         </div>
-      </div>
+          </div>
+        </mat-tab>
+
+        <!-- JSON Editor Tab -->
+        <mat-tab label="JSON Editor">
+          <div class="json-editor-container">
+            <div class="json-editor-toolbar">
+              <span class="json-editor-label">Edit schema as JSON</span>
+              <button mat-button (click)="formatJson()">
+                <mat-icon>code</mat-icon>
+                Format JSON
+              </button>
+              <button mat-button (click)="syncFromJson()" color="primary">
+                <mat-icon>sync</mat-icon>
+                Apply Changes
+              </button>
+            </div>
+            <textarea 
+              class="json-editor-textarea"
+              [(ngModel)]="jsonString"
+              spellcheck="false"
+              placeholder="Enter schema JSON...">
+            </textarea>
+            @if (jsonError()) {
+              <div class="json-error">
+                <mat-icon>error</mat-icon>
+                {{ jsonError() }}
+              </div>
+            }
+          </div>
+        </mat-tab>
+      </mat-tab-group>
     </div>
   `,
   styles: [`
@@ -212,6 +250,90 @@ import { MetadataEditorComponent } from './metadata-editor.component';
         border-bottom: none;
       }
     }
+
+    /* ── Tab Styles ── */
+    .schema-editor-tabs {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .schema-editor-tabs ::ng-deep .mat-mdc-tab-body-wrapper {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .schema-editor-tabs ::ng-deep .mat-mdc-tab-body-content {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* ── JSON Editor ── */
+    .json-editor-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+      padding: 16px;
+      gap: 12px;
+      background: var(--omni-bg, #fafafa);
+    }
+
+    .json-editor-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--omni-surface, white);
+      border: 1px solid var(--omni-border, rgba(0, 0, 0, 0.12));
+      border-radius: 4px;
+    }
+
+    .json-editor-label {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--omni-text, rgba(0, 0, 0, 0.87));
+    }
+
+    .json-editor-textarea {
+      flex: 1;
+      font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      padding: 16px;
+      border: 1px solid var(--omni-border, rgba(0, 0, 0, 0.12));
+      border-radius: 4px;
+      background: var(--omni-surface, white);
+      color: var(--omni-text, rgba(0, 0, 0, 0.87));
+      resize: none;
+      overflow: auto;
+      min-height: 0;
+    }
+
+    .json-editor-textarea:focus {
+      outline: 2px solid var(--omni-accent, #7c5cbf);
+      outline-offset: -2px;
+    }
+
+    .json-error {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: rgba(244, 67, 54, 0.1);
+      border: 1px solid #f44336;
+      border-radius: 4px;
+      color: #f44336;
+      font-size: 13px;
+    }
+
+    .json-error mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
   `]
 })
 export class SchemaEditorComponent {
@@ -231,10 +353,47 @@ export class SchemaEditorComponent {
   // Validation state
   validationResult = signal<{ valid: boolean; errors: string[] } | null>(null);
 
+  // Tab switching
+  selectedTabIndex = 0;
+
+  // JSON editor state
+  jsonString = '';
+  jsonError = signal<string | null>(null);
+
   constructor(private snackBar: MatSnackBar) {
     // Initialize editable schema from input
     const inputSchema = this.schema();
     this._editableSchema.set(this.deepClone(inputSchema));
+    this.syncToJson();
+
+    // Select first role by default if available
+    const roleKeys = Object.keys(inputSchema.roles || {});
+    if (roleKeys.length > 0 && !this.selectedRole()) {
+      this.selectedRole.set(roleKeys[0]);
+    }
+
+    // Watch for schema input changes and update editable schema
+    effect(() => {
+      const currentSchema = this.schema();
+      this._editableSchema.set(this.deepClone(currentSchema));
+      
+      const roleKeys = Object.keys(currentSchema.roles || {});
+      
+      // If no role selected or current selection doesn't exist, select first role
+      const currentSelection = this.selectedRole();
+      if (roleKeys.length > 0 && (!currentSelection || !currentSchema.roles[currentSelection])) {
+        this.selectedRole.set(roleKeys[0]);
+      }
+    });
+
+    // Sync JSON when schema changes (from GUI edits)
+    effect(() => {
+      const schema = this._editableSchema();
+      if (this.selectedTabIndex === 0) {
+        // Only sync to JSON when in GUI tab to avoid circular updates
+        this.syncToJson();
+      }
+    });
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -288,7 +447,9 @@ export class SchemaEditorComponent {
     this.updateSchema(updated);
     
     if (this.selectedRole() === roleKey) {
-      this.selectedRole.set(null);
+      // Select first available role instead of null
+      const remainingRoles = Object.keys(updated.roles);
+      this.selectedRole.set(remainingRoles.length > 0 ? remainingRoles[0] : null);
     }
 
     this.snackBar.open(`Role "${roleKey}" deleted`, 'Close', { duration: 3000 });
@@ -400,5 +561,54 @@ export class SchemaEditorComponent {
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // JSON Editor Methods
+  // ──────────────────────────────────────────────────────────────
+
+  private syncToJson(): void {
+    const schema = this._editableSchema();
+    this.jsonString = JSON.stringify(schema, null, 2);
+    this.jsonError.set(null);
+  }
+
+  syncFromJson(): void {
+    try {
+      const parsed = JSON.parse(this.jsonString);
+      
+      // Basic validation that it looks like a schema
+      if (!parsed.roles || typeof parsed.roles !== 'object') {
+        throw new Error('Invalid schema: missing or invalid "roles" property');
+      }
+      if (!parsed.allowed_children || typeof parsed.allowed_children !== 'object') {
+        throw new Error('Invalid schema: missing or invalid "allowed_children" property');
+      }
+      if (!parsed.metadata_definitions || typeof parsed.metadata_definitions !== 'object') {
+        throw new Error('Invalid schema: missing or invalid "metadata_definitions" property');
+      }
+
+      this._editableSchema.set(parsed as Schema);
+      this.emitChange();
+      this.jsonError.set(null);
+      this.snackBar.open('JSON changes applied', 'Close', { duration: 2000 });
+    } catch (error: any) {
+      const message = error?.message || 'Invalid JSON';
+      this.jsonError.set(message);
+      this.snackBar.open(`JSON Error: ${message}`, 'Close', { duration: 3000 });
+    }
+  }
+
+  formatJson(): void {
+    try {
+      const parsed = JSON.parse(this.jsonString);
+      this.jsonString = JSON.stringify(parsed, null, 2);
+      this.jsonError.set(null);
+      this.snackBar.open('JSON formatted', 'Close', { duration: 2000 });
+    } catch (error: any) {
+      const message = error?.message || 'Invalid JSON';
+      this.jsonError.set(message);
+      this.snackBar.open(`Cannot format: ${message}`, 'Close', { duration: 3000 });
+    }
   }
 }

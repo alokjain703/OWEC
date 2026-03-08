@@ -2,6 +2,7 @@ import {
   Component, OnInit, ChangeDetectionStrategy, inject, signal
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,6 +10,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatBadgeModule } from '@angular/material/badge';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { OmniApiService } from '../../core/services/omni-api.service';
 import { SchemaEditorComponent } from './components/schema-editor.component';
 import { Schema } from './models/schema.model';
@@ -26,8 +30,10 @@ interface NarrativeSchema {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatCardModule, MatChipsModule, MatIconModule,
     MatButtonModule, MatDividerModule, MatExpansionModule, MatBadgeModule,
+    MatFormFieldModule, MatInputModule, MatSnackBarModule,
     SchemaEditorComponent
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -75,15 +81,27 @@ interface NarrativeSchema {
                 </mat-chip-set>
               </mat-card-content>
 
-              <mat-card-actions align="end">
-                <button mat-button (click)="editSchema(s); $event.stopPropagation()">
-                  <mat-icon>edit</mat-icon>
-                  Edit
-                </button>
-                <button mat-button color="accent" (click)="select(s); $event.stopPropagation()">
-                  <mat-icon>info_outline</mat-icon>
-                  Details
-                </button>
+              <mat-card-actions class="schema-card-actions">
+                <div class="button-row">
+                  <button mat-button (click)="viewInEditor(s); $event.stopPropagation()" class="action-btn">
+                    <mat-icon>visibility</mat-icon>
+                    <span>View</span>
+                  </button>
+                  <button mat-button (click)="useAsTemplate(s); $event.stopPropagation()" class="action-btn">
+                    <mat-icon>content_copy</mat-icon>
+                    <span>Template</span>
+                  </button>
+                </div>
+                <div class="button-row">
+                  <button mat-button (click)="editSchema(s); $event.stopPropagation()" class="action-btn">
+                    <mat-icon>edit</mat-icon>
+                    <span>New Version</span>
+                  </button>
+                  <button mat-button color="accent" (click)="select(s); $event.stopPropagation()" class="action-btn">
+                    <mat-icon>info_outline</mat-icon>
+                    <span>Details</span>
+                  </button>
+                </div>
                 @if (activeId() === s.id) {
                   <mat-icon class="active-indicator" color="accent">check_circle</mat-icon>
                 }
@@ -132,7 +150,26 @@ interface NarrativeSchema {
               <mat-icon>arrow_back</mat-icon>
               Back to List
             </button>
-            <h2>{{ editingSchema() ? 'Edit Schema' : 'Create New Schema' }}</h2>
+            <h2>{{ editorTitle() }}</h2>
+            <div class="spacer"></div>
+            
+            @if (!isViewOnly()) {
+              <!-- Schema Name Input -->
+              <mat-form-field appearance="outline" class="schema-name-field">
+                <mat-label>Schema Name</mat-label>
+                <input matInput [(ngModel)]="schemaName" placeholder="Enter schema name">
+              </mat-form-field>
+
+              <button mat-raised-button color="primary" (click)="saveSchema()" [disabled]="!schemaName">
+                <mat-icon>save</mat-icon>
+                Save Schema
+              </button>
+            } @else {
+              <span class="view-only-badge">
+                <mat-icon>visibility</mat-icon>
+                View Only
+              </span>
+            }
           </div>
           <div class="editor-content">
             <omni-schema-editor
@@ -165,13 +202,15 @@ interface NarrativeSchema {
     /* ── Schema grid ── */
     .schema-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
       gap: 16px;
     }
 
     .schema-card {
       cursor: pointer;
       transition: border-color 0.2s, box-shadow 0.2s;
+      display: flex;
+      flex-direction: column;
     }
     .schema-card:hover {
       border-color: var(--omni-accent) !important;
@@ -191,12 +230,49 @@ interface NarrativeSchema {
       color: var(--omni-accent-light) !important;
     }
 
+    /* ── Card Actions ── */
+    .schema-card-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px 12px !important;
+      margin-top: auto;
+      position: relative;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 4px;
+      width: 100%;
+    }
+
+    .action-btn {
+      flex: 1;
+      min-width: 0;
+      padding: 0 8px !important;
+      font-size: 12px !important;
+    }
+
+    .action-btn mat-icon {
+      margin-right: 4px;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
+    .action-btn span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .active-indicator {
+      position: absolute;
+      top: 8px;
+      right: 8px;
       font-size: 20px;
       width: 20px;
       height: 20px;
-      margin-left: 4px;
-      align-self: center;
     }
 
     /* ── Detail panel ── */
@@ -255,6 +331,32 @@ interface NarrativeSchema {
       font-weight: 500;
     }
 
+    .spacer {
+      flex: 1;
+    }
+
+    .schema-name-field {
+      min-width: 300px;
+    }
+
+    .view-only-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(158, 158, 158, 0.1);
+      border-radius: 16px;
+      color: var(--omni-text-muted, rgba(0, 0, 0, 0.6));
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .view-only-badge mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
     .editor-content {
       flex: 1;
       overflow: hidden;
@@ -263,6 +365,7 @@ interface NarrativeSchema {
 })
 export class SchemasViewComponent implements OnInit {
   private api = inject(OmniApiService);
+  private snackBar = inject(MatSnackBar);
 
   schemas = signal<NarrativeSchema[]>([]);
   selected = signal<NarrativeSchema | null>(null);
@@ -271,19 +374,39 @@ export class SchemasViewComponent implements OnInit {
   // Editor state
   showEditor = signal(false);
   editingSchema = signal<NarrativeSchema | null>(null);
+  isTemplate = signal(false); // Whether we're using an existing schema as template
+  isViewOnly = signal(false); // Whether we're viewing (not editing)
   currentEditSchema = signal<Schema>({
     roles: {},
     allowed_children: {},
     metadata_definitions: {}
   });
+  schemaName = '';
+
+  editorTitle = () => {
+    if (this.isViewOnly()) {
+      return `View Schema: ${this.editingSchema()?.name || 'Schema'} (v${this.editingSchema()?.version || 1})`;
+    } else if (this.isTemplate()) {
+      return 'Create Schema from Template';
+    } else if (this.editingSchema()) {
+      return `Create New Version of ${this.editingSchema()!.name}`;
+    } else {
+      return 'Create New Schema';
+    }
+  };
 
   ngOnInit(): void {
-    this.schemas.set([
-      { id: 'a', name: 'BOOK_SERIES',  version: 1, created_at: '', definition: { roles: { universe: 'Universe', collection: 'Series',    major_unit: 'Book',   atomic_unit: 'Chapter'  } } },
-      { id: 'b', name: 'TV_SERIES',    version: 1, created_at: '', definition: { roles: { universe: 'Universe', collection: 'Show',      major_unit: 'Season', atomic_unit: 'Episode'  } } },
-      { id: 'c', name: 'MOVIE_SERIES', version: 1, created_at: '', definition: { roles: { universe: 'Universe', collection: 'Franchise', major_unit: 'Film',   atomic_unit: 'Sequence' } } },
-      { id: 'd', name: 'GAME_PROJECT', version: 1, created_at: '', definition: { roles: { universe: 'Universe', collection: 'Game',      major_unit: 'Act',    atomic_unit: 'Quest'    } } },
-    ]);
+    this.loadSchemas();
+  }
+
+  async loadSchemas(): Promise<void> {
+    try {
+      const result = await this.api.listSchemas().toPromise() as NarrativeSchema[];
+      this.schemas.set(result || []);
+    } catch (error) {
+      console.error('Failed to load schemas:', error);
+      this.snackBar.open('Failed to load schemas', 'Close', { duration: 3000 });
+    }
   }
 
   select(s: NarrativeSchema): void {
@@ -292,12 +415,20 @@ export class SchemasViewComponent implements OnInit {
   }
 
   getRoles(s: NarrativeSchema): string[] {
-    const roles = (s.definition as any)?.roles ?? {};
-    return Object.values(roles) as string[];
+    const def = s.definition as any;
+    if (def?.roles) {
+      return Object.values(def.roles).map((r: any) => 
+        typeof r === 'string' ? r : r.label || ''
+      );
+    }
+    return [];
   }
 
   createNewSchema(): void {
     this.editingSchema.set(null);
+    this.isTemplate.set(false);
+    this.isViewOnly.set(false);
+    this.schemaName = '';
     this.currentEditSchema.set({
       roles: {},
       allowed_children: {},
@@ -306,9 +437,29 @@ export class SchemasViewComponent implements OnInit {
     this.showEditor.set(true);
   }
 
+  viewInEditor(s: NarrativeSchema): void {
+    this.editingSchema.set(s);
+    this.isTemplate.set(false);
+    this.isViewOnly.set(true);
+    this.schemaName = s.name;
+    this.currentEditSchema.set(s.definition as unknown as Schema);
+    this.showEditor.set(true);
+  }
+
+  useAsTemplate(s: NarrativeSchema): void {
+    this.editingSchema.set(s);
+    this.isTemplate.set(true);
+    this.isViewOnly.set(false);
+    this.schemaName = s.name + '_COPY';
+    this.currentEditSchema.set(s.definition as unknown as Schema);
+    this.showEditor.set(true);
+  }
+
   editSchema(s: NarrativeSchema): void {
     this.editingSchema.set(s);
-    // Convert the old format to new format if needed
+    this.isTemplate.set(false);
+    this.isViewOnly.set(false);
+    this.schemaName = s.name; // Keep same name to create new version
     this.currentEditSchema.set(s.definition as unknown as Schema);
     this.showEditor.set(true);
   }
@@ -316,12 +467,50 @@ export class SchemasViewComponent implements OnInit {
   closeEditor(): void {
     this.showEditor.set(false);
     this.editingSchema.set(null);
+    this.isTemplate.set(false);
+    this.isViewOnly.set(false);
+    this.schemaName = '';
   }
 
   onSchemaChange(schema: Schema): void {
-    // Store the updated schema
     this.currentEditSchema.set(schema);
-    // TODO: Save to backend
-    console.log('Schema updated:', schema);
+  }
+
+  async saveSchema(): Promise<void> {
+    if (!this.schemaName) {
+      this.snackBar.open('Please enter a schema name', 'Close', { duration: 3000 });
+      return;
+    }
+
+    try {
+      const payload: any = {
+        name: this.schemaName,
+        definition: this.currentEditSchema()
+      };
+
+      const editingSchema = this.editingSchema();
+      if (editingSchema) {
+        if (this.isTemplate()) {
+          // Using as template with new name - version 1
+          payload.base_schema_id = editingSchema.id;
+          payload.is_new_version = false;
+        } else {
+          // Creating new version of existing schema
+          payload.is_new_version = true;
+        }
+      }
+
+      const result = await this.api.createSchema(payload).toPromise() as NarrativeSchema;
+      
+      this.snackBar.open(`Schema "${result.name}" v${result.version} created successfully`, 'Close', { duration: 3000 });
+      
+      // Reload schemas and close editor
+      await this.loadSchemas();
+      this.closeEditor();
+    } catch (error: any) {
+      console.error('Failed to save schema:', error);
+      const message = error?.error?.detail || 'Failed to save schema. The name+version combination might already exist.';
+      this.snackBar.open(message, 'Close', { duration: 5000 });
+    }
   }
 }

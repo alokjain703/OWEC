@@ -20,6 +20,9 @@ class Project(Base):
     active_schema_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("schemas.id", ondelete="SET NULL"), nullable=True
     )
+    schema_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

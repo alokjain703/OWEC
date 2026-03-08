@@ -1,7 +1,7 @@
 """Pydantic v2 schemas – NarrativeSchema (Bible Layer)"""
 import uuid
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -9,6 +9,8 @@ from pydantic import BaseModel, ConfigDict
 class SchemaCreate(BaseModel):
     name: str
     definition: Dict[str, Any]
+    base_schema_id: Optional[uuid.UUID] = None
+    is_new_version: bool = False
 
 
 class SchemaOut(BaseModel):

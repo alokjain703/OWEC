@@ -10,11 +10,13 @@ class ProjectCreate(BaseModel):
     owner_id: uuid.UUID
     title: str
     active_schema_id: Optional[uuid.UUID] = None
+    schema_version_id: Optional[uuid.UUID] = None
 
 
 class ProjectUpdate(BaseModel):
     title: Optional[str] = None
     active_schema_id: Optional[uuid.UUID] = None
+    schema_version_id: Optional[uuid.UUID] = None
 
 
 class ProjectOut(BaseModel):
@@ -24,5 +26,6 @@ class ProjectOut(BaseModel):
     owner_id: uuid.UUID
     title: str
     active_schema_id: Optional[uuid.UUID]
+    schema_version_id: Optional[uuid.UUID]
     created_at: datetime
     updated_at: datetime
