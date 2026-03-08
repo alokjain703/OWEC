@@ -30,6 +30,16 @@ export const routes: Routes = [
       ),
   },
   
+  // Application-level routes (protected)
+  {
+    path: 'schemas',
+    canActivate: [authGuard],
+    loadChildren: () =>
+      import('./features/schemas/schemas.routes').then(
+        (m) => m.SCHEMA_ROUTES
+      ),
+  },
+  
   // Project routes (protected)
   {
     path: 'projects/:projectId/tree',
@@ -80,17 +90,9 @@ export const routes: Routes = [
       import('./features/graph/graph.routes').then((m) => m.GRAPH_ROUTES),
   },
   {
-    path: 'schemas',
-    redirectTo: 'dashboard/user',
-    pathMatch: 'full'
-  },
-  {
     path: 'projects/:projectId/schemas',
-    canActivate: [authGuard],
-    loadChildren: () =>
-      import('./features/schemas/schemas.routes').then(
-        (m) => m.SCHEMA_ROUTES
-      ),
+    redirectTo: '/schemas',
+    pathMatch: 'full'
   },
   {
     path: 'auth/callback',

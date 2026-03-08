@@ -57,12 +57,13 @@ CREATE INDEX IF NOT EXISTS idx_user_workspace_access_workspace_id ON user_worksp
 -- projects
 -- -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS projects (
-    id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_id         UUID        NOT NULL,
-    title            TEXT        NOT NULL,
-    active_schema_id UUID,
-    created_at       TIMESTAMPTZ DEFAULT now(),
-    updated_at       TIMESTAMPTZ DEFAULT now()
+    id                 UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id           UUID        NOT NULL,
+    title              TEXT        NOT NULL,
+    active_schema_id   UUID,
+    schema_version_id  UUID,
+    created_at         TIMESTAMPTZ DEFAULT now(),
+    updated_at         TIMESTAMPTZ DEFAULT now()
 );
 
 -- -------------------------------------------------------

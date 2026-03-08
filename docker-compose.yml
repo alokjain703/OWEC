@@ -55,6 +55,11 @@ services:
       - backend
     environment:
       - NODE_ENV=development
+    volumes:
+      - ./omni-frontend/src:/app/src
+      - ./omni-frontend/angular.json:/app/angular.json
+      - ./omni-frontend/tsconfig.json:/app/tsconfig.json
+      - ./omni-frontend/tsconfig.app.json:/app/tsconfig.app.json
 
 volumes:
   omni_pgdata:

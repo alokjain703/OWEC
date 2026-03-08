@@ -367,21 +367,22 @@ export class AppComponent {
     const currentProject = this.workspaceState.currentProject();
     const projectId = currentProject?.id;
     
-    // If no project selected, return dashboard-only nav
+    // If no project selected, return app-level nav items
     if (!projectId) {
       return [
         { path: this.roleRouting.currentDashboard()?.route || '/dashboard/user', label: 'Dashboard', icon: 'dashboard', tooltip: 'User dashboard' },
+        { path: '/schemas', label: 'Schemas', icon: 'schema', tooltip: 'Schema templates' },
       ];
     }
     
     // If project selected, return full nav with project routes
     return [
       { path: this.roleRouting.currentDashboard()?.route || '/dashboard/user', label: 'Dashboard', icon: 'dashboard', tooltip: 'Return to dashboard' },
+      { path: '/schemas', label: 'Schemas', icon: 'schema', tooltip: 'Schema templates' },
       { path: `/projects/${projectId}/tree`, label: 'Tree', icon: 'account_tree', tooltip: 'Project node tree' },
       { path: `/projects/${projectId}/characters`, label: 'Characters', icon: 'people', tooltip: 'Character entity map' },
       { path: `/projects/${projectId}/timeline`, label: 'Timeline', icon: 'timeline', tooltip: 'Chronological events' },
       { path: `/projects/${projectId}/graph`, label: 'Graph', icon: 'hub', tooltip: 'Relationship graph' },
-      { path: `/projects/${projectId}/schemas`, label: 'Schemas', icon: 'schema', tooltip: 'Bible / writing schemas' },
     ];
   });
 

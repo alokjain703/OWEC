@@ -13,4 +13,4 @@ COPY . .
 # Re-use the builder stage directly so node_modules are already present.
 # Angular CLI is available as a local binary via pnpm (./node_modules/.bin/ng).
 EXPOSE 4252
-CMD ["./node_modules/.bin/ng", "serve", "--host", "0.0.0.0", "--port", "4252", "--disable-host-check"]
+CMD ["./node_modules/.bin/ng", "serve", "--host", "0.0.0.0", "--port", "4252", "--disable-host-check", "--poll", "2000"]
