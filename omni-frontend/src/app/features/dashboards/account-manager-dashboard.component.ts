@@ -7,9 +7,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 
 import { WorkspaceStateService } from '../../core/services/workspace-state.service';
 import { WorkspaceWithProjects, ProjectCacheDto } from '../../core/services/workspace.service';
+
+type ViewMode = 'table' | 'tree';
 
 @Component({
   selector: 'app-account-manager-dashboard',
@@ -21,17 +24,32 @@ import { WorkspaceWithProjects, ProjectCacheDto } from '../../core/services/work
     MatIconModule,
     MatExpansionModule,
     MatProgressSpinnerModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatButtonToggleModule
   ],
   template: `
     <div class="dashboard-container">
       <div class="dashboard-header">
-        <h1>Account Manager Dashboard</h1>
-        <p class="subtitle">Manage all workspaces and projects across the organization</p>
-        <button mat-raised-button color="primary" (click)="refreshWorkspaces()">
-          <mat-icon>refresh</mat-icon>
-          Sync from RAMPS
-        </button>
+        <div class="header-title">
+          <h1>Account Manager Dashboard</h1>
+          <p class="subtitle">Manage all workspaces and projects across the organization</p>
+        </div>
+        <div class="header-actions">
+          <mat-button-toggle-group [(value)]="viewMode" aria-label="View mode">
+            <mat-button-toggle value="table">
+              <mat-icon>view_list</mat-icon>
+              Table
+            </mat-button-toggle>
+            <mat-button-toggle value="tree">
+              <mat-icon>account_tree</mat-icon>
+              Tree
+            </mat-button-toggle>
+          </mat-button-toggle-group>
+          <button mat-raised-button color="primary" (click)="refreshWorkspaces()">
+            <mat-icon>refresh</mat-icon>
+            Sync from RAMPS
+          </button>
+        </div>
       </div>
 
       @if (workspaceState.isLoading()) {
@@ -56,8 +74,10 @@ import { WorkspaceWithProjects, ProjectCacheDto } from '../../core/services/work
           </button>
         </div>
       } @else {
-        <div class="workspaces-grid">
-          @for (workspace of workspaceState.workspaces(); track workspace.id) {
+        <!-- Table View -->
+        @if (viewMode() === 'table') {
+          <div class="workspaces-grid">
+            @for (workspace of workspaceState.workspaces(); track workspace.id) {
             <mat-card class="workspace-card">
               <mat-card-header>
                 <mat-card-title>{{ workspace.name }}</mat-card-title>
@@ -112,8 +132,58 @@ import { WorkspaceWithProjects, ProjectCacheDto } from '../../core/services/work
                 </button>
               </mat-card-actions>
             </mat-card>
-          }
-        </div>
+            }
+          </div>
+        }
+        
+        <!-- Tree View -->
+        @if (viewMode() === 'tree') {
+          <div class="tree-view">
+            <mat-card>
+              <mat-card-content>
+                <div class="tree-container">
+                  @for (workspace of workspaceState.workspaces(); track workspace.id) {
+                    <div class="tree-workspace">
+                      <div class="tree-node workspace-node">
+                        <mat-icon class="expand-icon">business</mat-icon>
+                        <span class="node-label">{{ workspace.name }}</span>
+                        <span class="node-badge">{{ workspace.projects.length }} projects</span>
+                      </div>
+                      
+                      @if (workspace.projects.length > 0) {
+                        <div class="tree-children">
+                          @for (project of workspace.projects; track project.id; let isLast = $last) {
+                            <div class="tree-project" [class.last-child]="isLast">
+                              <div class="tree-line"></div>
+                              <button 
+                                class="tree-node project-node"
+                                mat-button
+                                (click)="selectProject(workspace, project)"
+                                [class.selected]="isCurrentProject(project.id)">
+                                <mat-icon class="project-icon">description</mat-icon>
+                                <span class="node-label">{{ project.name }}</span>
+                                @if (project.project_type) {
+                                  <span class="node-type">{{ project.project_type }}</span>
+                                }
+                              </button>
+                            </div>
+                          }
+                        </div>
+                      } @else {
+                        <div class="tree-children">
+                          <div class="tree-empty">
+                            <mat-icon>info</mat-icon>
+                            <span>No projects in this workspace</span>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </mat-card-content>
+            </mat-card>
+          </div>
+        }
       }
     </div>
   `,
@@ -126,15 +196,29 @@ import { WorkspaceWithProjects, ProjectCacheDto } from '../../core/services/work
 
     .dashboard-header {
       margin-bottom: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
       
-      h1 {
-        margin: 0 0 8px 0;
-        color: var(--text-primary);
+      .header-title {
+        flex: 1;
+        
+        h1 {
+          margin: 0 0 8px 0;
+          color: var(--text-primary);
+        }
+        
+        .subtitle {
+          margin: 0;
+          color: var(--text-secondary);
+        }
       }
       
-      .subtitle {
-        margin: 0 0 16px 0;
-        color: var(--text-secondary);
+      .header-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
       }
     }
 
@@ -229,9 +313,134 @@ import { WorkspaceWithProjects, ProjectCacheDto } from '../../core/services/work
       gap: 8px;
       padding: 16px;
     }
+    
+    /* Tree View Styles */
+    .tree-view {
+      mat-card {
+        padding: 0;
+      }
+    }
+    
+    .tree-container {
+      padding: 16px;
+    }
+    
+    .tree-workspace {
+      margin-bottom: 24px;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+    
+    .tree-node {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 4px;
+      
+      &.workspace-node {
+        background-color: var(--primary-100, #e3f2fd);
+        border: 2px solid var(--primary-300, #90caf9);
+        font-weight: 500;
+        font-size: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        
+        .expand-icon {
+          color: var(--primary-600, #1976d2);
+        }
+      }
+      
+      &.project-node {
+        width: 100%;
+        justify-content: flex-start;
+        text-align: left;
+        transition: background-color 0.2s;
+        
+        &:hover {
+          background-color: var(--surface-variant, #f5f5f5);
+        }
+        
+        &.selected {
+          background-color: var(--primary-50);
+          border: 1px solid var(--primary-500);
+        }
+        
+        .project-icon {
+          color: var(--text-secondary);
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+      
+      .node-label {
+        flex: 1;
+      }
+      
+      .node-badge {
+        font-size: 12px;
+        color: var(--text-secondary);
+        background-color: var(--background, white);
+        padding: 4px 8px;
+        border-radius: 12px;
+      }
+      
+      .node-type {
+        font-size: 12px;
+        color: var(--text-secondary);
+        padding: 2px 8px;
+        background-color: var(--surface-variant, #f5f5f5);
+        border-radius: 4px;
+      }
+    }
+    
+    .tree-children {
+      margin-left: 32px;
+      margin-top: 8px;
+      position: relative;
+    }
+    
+    .tree-project {
+      position: relative;
+      margin-bottom: 4px;
+      
+      .tree-line {
+        position: absolute;
+        left: -20px;
+        top: 0;
+        bottom: 50%;
+        width: 20px;
+        border-left: 2px solid var(--divider, #e0e0e0);
+        border-bottom: 2px solid var(--divider, #e0e0e0);
+        border-bottom-left-radius: 8px;
+      }
+      
+      &.last-child .tree-line {
+        bottom: 50%;
+      }
+    }
+    
+    .tree-empty {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      color: var(--text-secondary);
+      font-style: italic;
+      
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
   `]
 })
 export class AccountManagerDashboardComponent implements OnInit {
+  viewMode = signal<ViewMode>('table');
+  
   constructor(
     public workspaceState: WorkspaceStateService,
     private router: Router,

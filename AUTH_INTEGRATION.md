@@ -56,17 +56,110 @@ OWEC (OMNI Narrative Engine) integrates with RAMPS (Resource Access Management P
 #### Services
 - `src/app/core/services/auth-state.service.ts` - Manages authentication state
 - `src/app/core/services/auth.service.ts` - Handles RAMPS API communication
+- `src/app/core/services/workspace.service.ts` - Syncs workspace/project data from RAMPS
+- `src/app/core/services/workspace-state.service.ts` - Manages workspace/project state
 - `src/app/core/auth.interceptor.ts` - Adds Authorization header to HTTP requests
 
 #### Components
 - `src/app/features/auth/auth-callback.component.ts` - Handles redirect from RAMPS
 - `src/app/app.component.ts` - Updated with user dropdown menu in header
 
+#### Backend Services
+- `omni-backend/app/modules/workspace_service.py` - Syncs and caches workspace/project metadata
+- `omni-backend/app/api/v1/workspaces.py` - Workspace sync and retrieval endpoints
+
 #### Configuration
 - `src/environments/environment.ts` - Added RAMPS URLs
 - `src/app/app.routes.ts` - Added auth/callback route
 - `src/app/app.config.ts` - Registered auth interceptor
 - `src/styles.scss` - Added user menu styles
+
+## Workspace & Project Integration
+
+### Data Hierarchy
+
+RAMPS and OWEC use a three-tier organizational structure:
+
+```
+RAMPS Tenant (Organization)
+  └── Workspace (resource_group with group_type="workspace")
+      └── Project (resource_group with group_type="project")
+          └── OWEC Narrative Data (nodes, entities, events, edges)
+```
+
+### Data Synchronization Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              Workspace & Project Sync Flow                       │
+└─────────────────────────────────────────────────────────────────┘
+
+1. User authenticates with RAMPS
+   │
+2. OWEC Dashboard loads
+   │
+   ├─→ Frontend: workspaceState.loadWorkspaces(forceSync=true)
+   │
+3. OWEC Backend: POST /api/v1/workspaces/sync
+   │   ├─→ Calls RAMPS: GET /api/users/{user_id}/workspaces
+   │   │   Returns: List of workspaces (resource_groups with type="workspace")
+   │   │
+   │   ├─→ For each workspace:
+   │   │   └── Calls RAMPS: GET /api/workspaces/{workspace_id}/projects
+   │   │       Returns: Projects (resource_groups with type="project", parent_group_id=workspace_id)
+   │   │
+   │   ├─→ Caches in OWEC database:
+   │   │   ├── workspace_cache (id, name, description, type, status)
+   │   │   ├── project_cache (id, workspace_id, name, description, type)
+   │   │   └── user_workspace_access (user_id, workspace_id, role)
+   │   │
+   │   └─→ Returns: {workspaces_synced: N, projects_synced: M}
+   │
+4. Frontend: GET /api/v1/workspaces/
+   │   Returns: Cached workspaces with their projects
+   │
+5. UI displays workspace selector with projects
+   │
+6. User selects project → OWEC loads narrative data
+```
+
+### Database Tables
+
+#### OWEC Cache Tables (Read-Only from RAMPS)
+
+**workspace_cache**
+- `id` (UUID) - RAMPS workspace ID
+- `name` - Workspace name
+- `workspace_id` - Foreign key to workspace
+- `description` - Workspace description
+- `workspace_type` - Type of workspace
+- `status` - active/inactive
+- `synced_at` - Last sync timestamp
+
+**project_cache**
+- `id` (UUID) - RAMPS project ID  
+- `workspace_id` (UUID FK) - Parent workspace
+- `name` - Project name
+- `description` - Project description
+- `project_type` - Type of project
+- `status` - active/inactive
+- `synced_at` - Last sync timestamp
+
+**user_workspace_access**
+- `user_id` (UUID) - RAMPS user ID
+- `workspace_id` (UUID FK) - Workspace access
+- `role` - User's role in workspace
+- `synced_at` - Last sync timestamp
+
+#### OWEC Native Tables (Owned by OWEC)
+
+**projects** (Linked to RAMPS project_cache.id)
+- Project-specific narrative structure
+- Linked to RAMPS project via ID
+
+**nodes, entities, events, edges**
+- Narrative content owned by OWEC
+- Referenced by project_id
 
 ### RAMPS Files
 
