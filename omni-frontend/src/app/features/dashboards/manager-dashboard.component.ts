@@ -36,13 +36,13 @@ type ViewMode = 'table' | 'tree';
         </div>
         <div class="header-actions">
           <mat-button-toggle-group [(value)]="viewMode" aria-label="View mode">
-            <mat-button-toggle value="table">
-              <mat-icon>view_list</mat-icon>
-              Table
-            </mat-button-toggle>
             <mat-button-toggle value="tree">
               <mat-icon>account_tree</mat-icon>
               Tree
+            </mat-button-toggle>
+            <mat-button-toggle value="table">
+              <mat-icon>view_list</mat-icon>
+              Table
             </mat-button-toggle>
           </mat-button-toggle-group>
           <button mat-raised-button color="primary" (click)="refreshWorkspaces()">
@@ -453,7 +453,7 @@ type ViewMode = 'table' | 'tree';
   `]
 })
 export class ManagerDashboardComponent implements OnInit {
-  viewMode = signal<ViewMode>('table');
+  viewMode = signal<ViewMode>('tree');
   
   constructor(
     public workspaceState: WorkspaceStateService,

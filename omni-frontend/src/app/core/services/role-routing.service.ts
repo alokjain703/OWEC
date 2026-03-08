@@ -41,8 +41,9 @@ export class RoleRoutingService {
   });
 
   constructor(private router: Router) {
-    // Load current role from localStorage
+    // Load current role and available roles from localStorage
     this.loadCurrentRole();
+    this.loadAvailableRoles();
   }
 
   /**
@@ -59,6 +60,13 @@ export class RoleRoutingService {
     console.log('RoleRoutingService - valid roles after normalization:', validRoles);
     
     this._availableRoles.set(validRoles);
+    
+    // Persist available roles to localStorage
+    try {
+      localStorage.setItem('availableRoles', JSON.stringify(validRoles));
+    } catch (error) {
+      console.error('Error saving available roles:', error);
+    }
 
     // Set current role if not already set OR if forcing update (e.g., on fresh login)
     if (!this._currentRole() || forceUpdate) {
@@ -206,11 +214,27 @@ export class RoleRoutingService {
   }
 
   /**
+   * Load available roles from localStorage
+   */
+  private loadAvailableRoles(): void {
+    try {
+      const savedRoles = localStorage.getItem('availableRoles');
+      if (savedRoles) {
+        const roles = JSON.parse(savedRoles) as UserRole[];
+        this._availableRoles.set(roles);
+      }
+    } catch (error) {
+      console.error('Error loading available roles:', error);
+    }
+  }
+
+  /**
    * Clear role state (on logout)
    */
   clearRoles(): void {
     this._currentRole.set(null);
     this._availableRoles.set([]);
     localStorage.removeItem('currentRole');
+    localStorage.removeItem('availableRoles');
   }
 }

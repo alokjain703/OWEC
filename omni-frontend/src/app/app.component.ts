@@ -289,11 +289,14 @@ interface NavItem {
       padding: 6px 12px;
       margin-left: 16px;
       border-radius: 24px;
-      background-color: rgba(255, 255, 255, 0.05);
-      transition: background-color 0.2s;
+      background-color: rgba(124, 92, 191, 0.12);
+      border: 1px solid rgba(124, 92, 191, 0.3);
+      color: var(--omni-text);
+      transition: all 0.2s;
     }
     .role-switcher-button:hover {
-      background-color: rgba(255, 255, 255, 0.1);
+      background-color: rgba(124, 92, 191, 0.2);
+      border-color: rgba(124, 92, 191, 0.4);
     }
     .menu-header {
       font-size: 12px;
@@ -303,7 +306,7 @@ interface NavItem {
       letter-spacing: 0.5px;
     }
     .active-role {
-      background-color: rgba(124, 92, 191, 0.15);
+      background-color: rgba(124, 92, 191, 0.2);
     }
     
     /* User menu button */
@@ -314,10 +317,14 @@ interface NavItem {
       padding: 6px 12px;
       margin-left: 8px;
       border-radius: 24px;
-      transition: background-color 0.2s;
+      background-color: rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(0, 0, 0, 0.2);
+      color: var(--omni-text);
+      transition: all 0.2s;
     }
     .user-menu-button:hover {
-      background-color: rgba(255, 255, 255, 0.08);
+      background-color: rgba(124, 92, 191, 0.12);
+      border-color: rgba(124, 92, 191, 0.3);
     }
     .user-name {
       font-size: 14px;
@@ -389,6 +396,13 @@ export class AppComponent {
       
     // Check auth state on app init
     this.authState.refresh();
+    
+    // Initialize roles from authenticated user (needed after page refresh)
+    const currentUser = this.authState.getCurrentUser();
+    if (currentUser?.roles && currentUser.roles.length > 0) {
+      console.log('[AppComponent] Initializing roles from user:', currentUser.roles);
+      this.roleRouting.initializeRoles(currentUser.roles, false);
+    }
   }
   
   login(): void {
@@ -407,6 +421,12 @@ export class AppComponent {
     // Clear local authentication state
     this.authState.logout();
     
+    // Clear role state
+    this.roleRouting.clearRoles();
+    
+    // Clear workspace/project selection
+    this.workspaceState.clearSelection();
+    
     // Stay on OWEC - user will see Sign In button
     // RAMPS session will be cleared on next login
   }
@@ -420,6 +440,9 @@ export class AppComponent {
   }
   
   switchRole(role: 'sc-acct-mgr' | 'sc-mgr' | 'sc-user'): void {
+    // Clear current project selection when switching roles
+    this.workspaceState.clearSelection();
+    // Navigate to the dashboard for the selected role
     this.roleRouting.navigateToDashboard(role);
   }
 }
