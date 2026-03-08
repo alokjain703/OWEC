@@ -42,6 +42,11 @@ class Settings(BaseSettings):
     storage_mode: StorageMode = StorageMode.LOCAL
     local_storage_path: str = "./storage_data"
 
+    # ── RAMPS Integration ─────────────────────────────────────────────────────
+    RAMPS_API_URL: str = Field(
+        default="http://localhost:8001/api"
+    )
+
     # ── S3 ────────────────────────────────────────────────────────────────────
     s3_bucket: str = ""
     aws_access_key_id: str = ""

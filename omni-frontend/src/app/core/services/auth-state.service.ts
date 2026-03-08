@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { map, distinctUntilChanged } from 'rxjs/operators';
 
 export interface UserInfo {
   id: string;
@@ -25,9 +26,16 @@ export class AuthStateService {
   // Public observable for components to subscribe to
   public readonly authState$: Observable<AuthState> = this.authStateSubject.asObservable();
   
-  // Convenience observables
-  public readonly isAuthenticated$: Observable<boolean> = new BehaviorSubject<boolean>(this.authStateSubject.value.isAuthenticated);
-  public readonly currentUser$: Observable<UserInfo | null> = new BehaviorSubject<UserInfo | null>(this.authStateSubject.value.user);
+  // Convenience observables - derived from main state
+  public readonly isAuthenticated$: Observable<boolean> = this.authState$.pipe(
+    map(state => state.isAuthenticated),
+    distinctUntilChanged()
+  );
+  
+  public readonly currentUser$: Observable<UserInfo | null> = this.authState$.pipe(
+    map(state => state.user),
+    distinctUntilChanged()
+  );
 
   constructor() {
     // Initialize from localStorage
@@ -71,8 +79,6 @@ export class AuthStateService {
   private loadFromStorage(): void {
     const state = this.getInitialState();
     this.authStateSubject.next(state);
-    (this.isAuthenticated$ as BehaviorSubject<boolean>).next(state.isAuthenticated);
-    (this.currentUser$ as BehaviorSubject<UserInfo | null>).next(state.user);
   }
 
   /**
@@ -100,13 +106,17 @@ export class AuthStateService {
    * Get current token (synchronous)
    */
   public getToken(): string | null {
-    return this.authStateSubject.value.token;
+    const token = this.authStateSubject.value.token;
+    console.log('[AuthState] getToken() called, has token:', !!token);
+    return token;
   }
 
   /**
    * Set authentication state after login
    */
   public login(token: string, user: UserInfo): void {
+    console.log('[AuthState] login() called, saving token and user:', { email: user.email });
+    
     // Save to localStorage
     localStorage.setItem('access_token', token);
     localStorage.setItem('user', JSON.stringify(user));
@@ -119,8 +129,8 @@ export class AuthStateService {
     };
     
     this.authStateSubject.next(newState);
-    (this.isAuthenticated$ as BehaviorSubject<boolean>).next(true);
-    (this.currentUser$ as BehaviorSubject<UserInfo | null>).next(user);
+    
+    console.log('[AuthState] Token saved, isAuthenticated:', this.isAuthenticated());
   }
 
   /**
@@ -139,8 +149,6 @@ export class AuthStateService {
     };
     
     this.authStateSubject.next(newState);
-    (this.isAuthenticated$ as BehaviorSubject<boolean>).next(false);
-    (this.currentUser$ as BehaviorSubject<UserInfo | null>).next(null);
   }
 
   /**
@@ -165,7 +173,6 @@ export class AuthStateService {
     };
     
     this.authStateSubject.next(newState);
-    (this.currentUser$ as BehaviorSubject<UserInfo | null>).next(updatedUser);
   }
 
   /**

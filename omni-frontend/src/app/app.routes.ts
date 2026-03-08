@@ -1,14 +1,55 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'tree', pathMatch: 'full' },
+  { path: '', redirectTo: 'dashboard/user', pathMatch: 'full' },
+  
+  // Dashboard routes (protected)
   {
-    path: 'tree',
+    path: 'dashboard/account-manager',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/dashboards/account-manager-dashboard.component').then(
+        (m) => m.AccountManagerDashboardComponent
+      ),
+  },
+  {
+    path: 'dashboard/manager',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/dashboards/manager-dashboard.component').then(
+        (m) => m.ManagerDashboardComponent
+      ),
+  },
+  {
+    path: 'dashboard/user',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/dashboards/user-dashboard.component').then(
+        (m) => m.UserDashboardComponent
+      ),
+  },
+  
+  // Project routes (protected)
+  {
+    path: 'projects/:projectId/tree',
+    canActivate: [authGuard],
     loadChildren: () =>
       import('./features/tree/tree.routes').then((m) => m.TREE_ROUTES),
   },
   {
+    path: 'tree',
+    redirectTo: 'dashboard/user',
+    pathMatch: 'full'
+  },
+  {
     path: 'characters',
+    redirectTo: 'dashboard/user',
+    pathMatch: 'full'
+  },
+  {
+    path: 'projects/:projectId/characters',
+    canActivate: [authGuard],
     loadChildren: () =>
       import('./features/characters/characters.routes').then(
         (m) => m.CHARACTER_ROUTES
@@ -16,6 +57,12 @@ export const routes: Routes = [
   },
   {
     path: 'timeline',
+    redirectTo: 'dashboard/user',
+    pathMatch: 'full'
+  },
+  {
+    path: 'projects/:projectId/timeline',
+    canActivate: [authGuard],
     loadChildren: () =>
       import('./features/timeline/timeline.routes').then(
         (m) => m.TIMELINE_ROUTES
@@ -23,11 +70,23 @@ export const routes: Routes = [
   },
   {
     path: 'graph',
+    redirectTo: 'dashboard/user',
+    pathMatch: 'full'
+  },
+  {
+    path: 'projects/:projectId/graph',
+    canActivate: [authGuard],
     loadChildren: () =>
       import('./features/graph/graph.routes').then((m) => m.GRAPH_ROUTES),
   },
   {
     path: 'schemas',
+    redirectTo: 'dashboard/user',
+    pathMatch: 'full'
+  },
+  {
+    path: 'projects/:projectId/schemas',
+    canActivate: [authGuard],
     loadChildren: () =>
       import('./features/schemas/schemas.routes').then(
         (m) => m.SCHEMA_ROUTES
@@ -40,5 +99,5 @@ export const routes: Routes = [
         (m) => m.AuthCallbackComponent
       ),
   },
-  { path: '**', redirectTo: 'tree' },
+  { path: '**', redirectTo: 'dashboard/user' },
 ];

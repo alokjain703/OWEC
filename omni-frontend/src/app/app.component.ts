@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -11,10 +11,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatChipsModule } from '@angular/material/chips';
 import { ThemeService } from './core/services/theme.service';
 import { ThemeSwitcherComponent } from './theme-switcher.component';
 import { AuthStateService } from './core/services/auth-state.service';
 import { AuthService } from './core/services/auth.service';
+import { RoleRoutingService } from './core/services/role-routing.service';
+import { WorkspaceStateService } from './core/services/workspace-state.service';
 
 interface NavItem {
   path: string;
@@ -30,7 +33,7 @@ interface NavItem {
     CommonModule,
     RouterOutlet, RouterLink, RouterLinkActive,
     MatSidenavModule, MatToolbarModule, MatListModule,
-    MatIconModule, MatButtonModule, MatTooltipModule, MatDividerModule, MatMenuModule,
+    MatIconModule, MatButtonModule, MatTooltipModule, MatDividerModule, MatMenuModule, MatChipsModule,
     ThemeSwitcherComponent,
   ],
   template: `
@@ -54,7 +57,7 @@ interface NavItem {
 
         <!-- Navigation -->
         <mat-nav-list class="omni-nav-list">
-          @for (item of navItems; track item.path) {
+          @for (item of navItems(); track item.path) {
             <a
               mat-list-item
               [routerLink]="item.path"
@@ -82,7 +85,52 @@ interface NavItem {
             <mat-icon>menu</mat-icon>
           </button>
           <span class="toolbar-title">OMNI – Narrative Engine</span>
+          
+          <!-- Workspace and Project Display -->
+          @if (workspaceState.currentWorkspace()) {
+            <div class="workspace-project-display">
+              <mat-chip class="workspace-chip">
+                <mat-icon>business</mat-icon>
+                {{ workspaceState.currentWorkspace()!.name }}
+              </mat-chip>
+              @if (workspaceState.currentProject()) {
+                <mat-icon class="separator-icon">chevron_right</mat-icon>
+                <mat-chip class="project-chip">
+                  <mat-icon>folder</mat-icon>
+                  {{ workspaceState.currentProject()!.name }}
+                </mat-chip>
+              }
+            </div>
+          }
+          
           <span class="toolbar-spacer"></span>
+          
+          <!-- Role Switcher -->
+          @if (roleRouting.hasMultipleRoles() && roleRouting.currentRole()) {
+            <button mat-button [matMenuTriggerFor]="roleMenu" class="role-switcher-button">
+              <mat-icon>swap_horiz</mat-icon>
+              <span>{{ roleRouting.getDashboardLabel(roleRouting.currentRole()!) }}</span>
+              <mat-icon class="dropdown-icon">arrow_drop_down</mat-icon>
+            </button>
+            <mat-menu #roleMenu="matMenu">
+              <div mat-menu-item disabled class="menu-header">Switch Dashboard</div>
+              <mat-divider></mat-divider>
+              @for (dashboard of roleRouting.getAvailableDashboards(); track dashboard.role) {
+                <button 
+                  mat-menu-item 
+                  (click)="switchRole(dashboard.role)"
+                  [class.active-role]="roleRouting.currentRole() === dashboard.role">
+                  @if (roleRouting.currentRole() === dashboard.role) {
+                    <mat-icon>check</mat-icon>
+                  } @else {
+                    <mat-icon></mat-icon>
+                  }
+                  <span>{{ dashboard.label }}</span>
+                </button>
+              }
+            </mat-menu>
+          }
+          
           <omni-theme-switcher />
           
           @if (currentUser$ | async; as currentUser) {
@@ -200,6 +248,64 @@ interface NavItem {
     }
     .toolbar-spacer { flex: 1; }
     
+    /* Workspace and Project Display */
+    .workspace-project-display {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 24px;
+      padding: 4px 12px;
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 20px;
+    }
+    .workspace-chip,
+    .project-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      height: 28px;
+      padding: 0 10px;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    .workspace-chip mat-icon,
+    .project-chip mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+    .separator-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: var(--omni-text-muted);
+    }
+    
+    /* Role Switcher */
+    .role-switcher-button {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      margin-left: 16px;
+      border-radius: 24px;
+      background-color: rgba(255, 255, 255, 0.05);
+      transition: background-color 0.2s;
+    }
+    .role-switcher-button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    .menu-header {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--omni-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .active-role {
+      background-color: rgba(124, 92, 191, 0.15);
+    }
+    
     /* User menu button */
     .user-menu-button {
       display: flex;
@@ -236,6 +342,8 @@ export class AppComponent {
   private router = inject(Router);
   private authState = inject(AuthStateService);
   private authService = inject(AuthService);
+  public roleRouting = inject(RoleRoutingService);
+  public workspaceState = inject(WorkspaceStateService);
   // Inject ThemeService here so its effect() runs at app startup
   private themeSvc = inject(ThemeService);
 
@@ -247,13 +355,28 @@ export class AppComponent {
   currentUser$ = this.authState.currentUser$;
   isAuthenticated$ = this.authState.isAuthenticated$;
 
-  navItems: NavItem[] = [
-    { path: '/tree',       label: 'Tree',       icon: 'account_tree', tooltip: 'Project node tree' },
-    { path: '/characters', label: 'Characters',  icon: 'people',       tooltip: 'Character entity map' },
-    { path: '/timeline',   label: 'Timeline',    icon: 'timeline',     tooltip: 'Chronological events' },
-    { path: '/graph',      label: 'Graph',       icon: 'hub',          tooltip: 'Relationship graph' },
-    { path: '/schemas',    label: 'Schemas',     icon: 'schema',       tooltip: 'Bible / writing schemas' },
-  ];
+  // Computed nav items that update based on current project selection
+  navItems = computed(() => {
+    const currentProject = this.workspaceState.currentProject();
+    const projectId = currentProject?.id;
+    
+    // If no project selected, return dashboard-only nav
+    if (!projectId) {
+      return [
+        { path: this.roleRouting.currentDashboard()?.route || '/dashboard/user', label: 'Dashboard', icon: 'dashboard', tooltip: 'User dashboard' },
+      ];
+    }
+    
+    // If project selected, return full nav with project routes
+    return [
+      { path: this.roleRouting.currentDashboard()?.route || '/dashboard/user', label: 'Dashboard', icon: 'dashboard', tooltip: 'Return to dashboard' },
+      { path: `/projects/${projectId}/tree`, label: 'Tree', icon: 'account_tree', tooltip: 'Project node tree' },
+      { path: `/projects/${projectId}/characters`, label: 'Characters', icon: 'people', tooltip: 'Character entity map' },
+      { path: `/projects/${projectId}/timeline`, label: 'Timeline', icon: 'timeline', tooltip: 'Chronological events' },
+      { path: `/projects/${projectId}/graph`, label: 'Graph', icon: 'hub', tooltip: 'Relationship graph' },
+      { path: `/projects/${projectId}/schemas`, label: 'Schemas', icon: 'schema', tooltip: 'Bible / writing schemas' },
+    ];
+  });
 
   constructor() {
     this.bp.observe([Breakpoints.Handset])
@@ -294,6 +417,10 @@ export class AppComponent {
   
   navigateToSettings(): void {
     this.router.navigate(['/settings']);
+  }
+  
+  switchRole(role: 'sc-acct-mgr' | 'sc-mgr' | 'sc-user'): void {
+    this.roleRouting.navigateToDashboard(role);
   }
 }
 

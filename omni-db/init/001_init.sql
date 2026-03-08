@@ -5,6 +5,55 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- -------------------------------------------------------
+-- workspace_cache (from RAMPS)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS workspace_cache (
+    id               UUID        PRIMARY KEY,
+    name             TEXT        NOT NULL,
+    description      TEXT,
+    workspace_type   TEXT,
+    status           TEXT        NOT NULL DEFAULT 'active',
+    created_at       TIMESTAMPTZ NOT NULL,
+    updated_at       TIMESTAMPTZ NOT NULL,
+    synced_at        TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_workspace_cache_status ON workspace_cache(status);
+
+-- -------------------------------------------------------
+-- project_cache (from RAMPS)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS project_cache (
+    id               UUID        PRIMARY KEY,
+    workspace_id     UUID        NOT NULL,
+    name             TEXT        NOT NULL,
+    description      TEXT,
+    project_type     TEXT,
+    status           TEXT        NOT NULL DEFAULT 'active',
+    created_at       TIMESTAMPTZ NOT NULL,
+    updated_at       TIMESTAMPTZ NOT NULL,
+    synced_at        TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_project_cache_workspace_id ON project_cache(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_project_cache_status ON project_cache(status);
+
+-- -------------------------------------------------------
+-- user_workspace_access (from RAMPS)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_workspace_access (
+    user_id          UUID        NOT NULL,
+    workspace_id     UUID        NOT NULL,
+    role             TEXT        NOT NULL,
+    granted_at       TIMESTAMPTZ NOT NULL,
+    synced_at        TIMESTAMPTZ DEFAULT now(),
+    PRIMARY KEY (user_id, workspace_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_workspace_access_user_id ON user_workspace_access(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_workspace_access_workspace_id ON user_workspace_access(workspace_id);
+
+-- -------------------------------------------------------
 -- projects
 -- -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS projects (

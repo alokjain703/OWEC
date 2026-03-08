@@ -1,0 +1,14 @@
+{
+  "/api": {
+    "target": "http://backend:8052",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "pathRewrite": {
+      "^/api": "/api"
+    },
+    "headers": {
+      "Connection": "keep-alive"
+    }
+  }
+}
