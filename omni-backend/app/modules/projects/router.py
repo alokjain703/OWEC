@@ -2,7 +2,7 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -105,3 +105,32 @@ async def get_project_nodes(
     Returns a list of root nodes, each with nested children.
     """
     return await svc.get_project_nodes(project_id)
+
+@router.post("/{project_id}/initialize-schema",
+             status_code=status.HTTP_200_OK,
+             summary="Initialize project with schema template")
+async def initialize_project_with_schema(
+    project_id: uuid.UUID,
+    schema_id: uuid.UUID = Body(..., embed=True),
+    svc: ProjectService = Depends(get_project_service),
+    loader: SchemaLoaderService = Depends(get_schema_loader_service),
+):
+    """
+    Initialize an existing project with a schema template.
+    This will create starter nodes based on the schema definition.
+    """
+    try:
+        # Verify project exists
+        project = await svc.get_project(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        # Initialize with schema
+        await loader.initialize_project_from_schema(project_id, schema_id)
+        
+        # Update project's active_schema_id
+        await svc.update_project(project_id, ProjectUpdate(active_schema_id=schema_id))
+        
+        return {"message": "Project initialized successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

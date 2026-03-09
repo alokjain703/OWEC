@@ -27,6 +27,11 @@ export class OmniApiService {
   getProjectNodes(projectId: string): Observable<unknown[]> {
     return this.http.get<unknown[]>(`${this.base}/projects/${projectId}/nodes`);
   }
+  initializeProjectWithSchema(projectId: string, schemaId: string): Observable<unknown> {
+    return this.http.post(`${this.base}/projects/${projectId}/initialize-schema`, {
+      schema_id: schemaId
+    });
+  }
 
   // ── Tree ────────────────────────────────────────────────────────────────────
   createNode(payload: unknown): Observable<unknown> {

@@ -39,7 +39,19 @@ INSERT INTO schemas (name, version, definition) VALUES
         "scene_type":  {"type": "string", "enum": ["action","dialogue","internal","transition"], "required": false},
         "word_count":  {"type": "integer","required": false}
       }
-    }
+    },
+    "starter_nodes": [
+      {
+        "title": "Story Universe",
+        "role": "universe",
+        "children": [
+          {"title": "Books", "role": "collection"},
+          {"title": "Characters", "role": "collection"},
+          {"title": "Locations", "role": "collection"},
+          {"title": "Timeline", "role": "collection"}
+        ]
+      }
+    ]
   }'::jsonb
 ),
 
@@ -78,7 +90,19 @@ INSERT INTO schemas (name, version, definition) VALUES
         "runtime_mins":   {"type": "integer", "required": false},
         "cold_open":      {"type": "boolean", "required": false}
       }
-    }
+    },
+    "starter_nodes": [
+      {
+        "title": "TV Universe",
+        "role": "universe",
+        "children": [
+          {"title": "Shows", "role": "collection"},
+          {"title": "Characters", "role": "collection"},
+          {"title": "Locations", "role": "collection"},
+          {"title": "Timeline", "role": "collection"}
+        ]
+      }
+    ]
   }'::jsonb
 ),
 
@@ -116,7 +140,19 @@ INSERT INTO schemas (name, version, definition) VALUES
         "sequence_type":   {"type": "string",  "enum": ["setup","confrontation","climax","denouement"], "required": false},
         "location":        {"type": "string",  "required": false}
       }
-    }
+    },
+    "starter_nodes": [
+      {
+        "title": "Cinematic Universe",
+        "role": "universe",
+        "children": [
+          {"title": "Films", "role": "collection"},
+          {"title": "Characters", "role": "collection"},
+          {"title": "Locations", "role": "collection"},
+          {"title": "Timeline", "role": "collection"}
+        ]
+      }
+    ]
   }'::jsonb
 ),
 
@@ -155,6 +191,18 @@ INSERT INTO schemas (name, version, definition) VALUES
         "repeatable":     {"type": "boolean","required": false},
         "reward_data":    {"type": "object", "required": false}
       }
-    }
+    },
+    "starter_nodes": [
+      {
+        "title": "Game Universe",
+        "role": "universe",
+        "children": [
+          {"title": "Main Campaign", "role": "collection"},
+          {"title": "Characters", "role": "collection"},
+          {"title": "World Locations", "role": "collection"},
+          {"title": "Lore & Timeline", "role": "collection"}
+        ]
+      }
+    ]
   }'::jsonb
 );

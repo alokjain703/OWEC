@@ -24,18 +24,23 @@ class SchemaLoaderService:
         """
         Create starter nodes for a project based on schema definition.
         
-        For example, if schema is "BOOK_SERIES" with roles:
-        - universe
-        - collection
-        - major_unit
-        - atomic_unit
+        If the schema definition includes a 'starter_nodes' field, uses that
+        to create the initial structure. Otherwise, falls back to default behavior.
         
-        Creates a starter structure:
-        Story Universe (universe)
-        ├── Books (collection)
-        ├── Characters (collection)
-        ├── Locations (collection)
-        └── Timeline (collection)
+        Example starter_nodes structure in schema:
+        {
+          "starter_nodes": [
+            {
+              "title": "Story Universe",
+              "role": "universe",
+              "children": [
+                {"title": "Books", "role": "collection"},
+                {"title": "Characters", "role": "collection"},
+                {"title": "Locations", "role": "collection"}
+              ]
+            }
+          ]
+        }
         """
         schema = await self.db.get(NarrativeSchema, schema_id)
         if not schema:
@@ -46,6 +51,94 @@ class SchemaLoaderService:
         
         if not roles:
             raise ValueError("Schema has no roles defined")
+        
+        # Check if schema defines starter_nodes
+        starter_nodes = definition.get("starter_nodes")
+        
+        if starter_nodes:
+            # Use schema-defined starter nodes
+            return await self._create_nodes_from_definition(
+                project_id, 
+                starter_nodes,
+                parent_id=None,
+                depth=0
+            )
+        else:
+            # Fall back to legacy behavior
+            return await self._create_default_starter_nodes(
+                project_id,
+                schema.name,
+                roles
+            )
+    
+    async def _create_nodes_from_definition(
+        self,
+        project_id: uuid.UUID,
+        node_definitions: list[dict],
+        parent_id: Optional[uuid.UUID] = None,
+        depth: int = 0
+    ) -> list[Node]:
+        """
+        Recursively create nodes from starter_nodes definition.
+        
+        Args:
+            project_id: The project to create nodes for
+            node_definitions: List of node definitions with 'title', 'role', and optional 'children'
+            parent_id: Parent node ID (None for root nodes)
+            depth: Current depth in the tree
+        
+        Returns:
+            List of created nodes
+        """
+        nodes = []
+        
+        for idx, node_def in enumerate(node_definitions):
+            title = node_def.get("title", "Untitled")
+            role = node_def.get("role")
+            content = node_def.get("content", "")
+            metadata = node_def.get("metadata", {})
+            children_defs = node_def.get("children", [])
+            
+            if not role:
+                continue  # Skip nodes without a role
+            
+            # Create the node
+            node = Node(
+                project_id=project_id,
+                parent_id=parent_id,
+                depth=depth,
+                order_index=idx,
+                node_role=role,
+                title=title,
+                content=content,
+                metadata_=metadata,
+            )
+            self.db.add(node)
+            await self.db.flush()
+            await self.db.refresh(node)
+            nodes.append(node)
+            
+            # Recursively create children
+            if children_defs:
+                child_nodes = await self._create_nodes_from_definition(
+                    project_id,
+                    children_defs,
+                    parent_id=node.id,
+                    depth=depth + 1
+                )
+                nodes.extend(child_nodes)
+        
+        return nodes
+    
+    async def _create_default_starter_nodes(
+        self,
+        project_id: uuid.UUID,
+        schema_name: str,
+        roles: dict
+    ) -> list[Node]:
+        """
+        Create default starter nodes using legacy hardcoded behavior.
+        """
         
         # Get role keys in hierarchical order (typically: universe, collection, major_unit, atomic_unit)
         role_keys = list(roles.keys())
@@ -78,7 +171,7 @@ class SchemaLoaderService:
         
         # Create starter collection nodes if second role exists
         if second_role:
-            starter_collections = self._get_starter_collections(schema.name)
+            starter_collections = self._get_starter_collections(schema_name)
             for idx, collection_name in enumerate(starter_collections):
                 collection_node = Node(
                     project_id=project_id,

@@ -22,6 +22,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { OmniApiService } from '../../../core/services/omni-api.service';
 import { AuthStateService } from '../../../core/services/auth-state.service';
+import { SchemaLoaderService, SchemaOption } from '../services/schema-loader.service';
 import { TreeEditorComponent } from './tree-editor.component';
 import {
   TreeNode,
@@ -134,14 +135,54 @@ interface Schema {
           </button>
         </div>
 
-        <!-- Tree editor -->
-        <omni-tree-editor
-          [nodes]="treeNodes()"
-          (nodeSelected)="handleNodeSelected($event)"
-          (nodeCreated)="handleNodeCreated($event)"
-          (nodeDeleted)="handleNodeDeleted($event)"
-          (nodeRenamed)="handleNodeRenamed($event)">
-        </omni-tree-editor>
+        <!-- Tree editor or schema initialization -->
+        @if (treeNodes().length === 0) {
+          <!-- Schema selection for empty project -->
+          <div class="schema-selection">
+            <mat-icon class="schema-icon">account_tree</mat-icon>
+            <h3>Initialize Project Structure</h3>
+            <p>This project has no nodes yet. Choose a schema template to get started.</p>
+            
+            @if (loadingSchemas()) {
+              <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
+            } @else if (initializingWithSchema()) {
+              <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
+              <p>Initializing project with schema...</p>
+            } @else if (availableSchemas().length > 0) {
+              <div class="schema-list">
+                @for (schema of availableSchemas(); track schema.id) {
+                  <button mat-raised-button class="schema-option" (click)="initializeWithSchema(schema)">
+                    <mat-icon>folder_special</mat-icon>
+                    <div class="schema-info">
+                      <span class="schema-name">{{ schema.name }}</span>
+                      <span class="schema-version">v{{ schema.version }}</span>
+                    </div>
+                  </button>
+                }
+              </div>
+              <div class="schema-actions">
+                <button mat-button (click)="loadSchemas()">
+                  <mat-icon>refresh</mat-icon>
+                  Refresh Schemas
+                </button>
+              </div>
+            } @else {
+              <p>No schemas available</p>
+              <button mat-raised-button color="primary" (click)="loadSchemas()">
+                <mat-icon>refresh</mat-icon>
+                Load Schemas
+              </button>
+            }
+          </div>
+        } @else {
+          <omni-tree-editor
+            [nodes]="treeNodes()"
+            (nodeSelected)="handleNodeSelected($event)"
+            (nodeCreated)="handleNodeCreated($event)"
+            (nodeDeleted)="handleNodeDeleted($event)"
+            (nodeRenamed)="handleNodeRenamed($event)">
+          </omni-tree-editor>
+        }
       }
     </div>
 
@@ -217,6 +258,79 @@ interface Schema {
       font-size: 20px;
       font-weight: 500;
     }
+
+    .schema-selection {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px;
+      text-align: center;
+    }
+
+    .schema-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+      color: var(--primary-500);
+      margin-bottom: 16px;
+      opacity: 0.7;
+    }
+
+    .schema-selection h3 {
+      margin: 0 0 8px 0;
+      font-size: 20px;
+      font-weight: 500;
+    }
+
+    .schema-selection p {
+      margin: 0 0 24px 0;
+      color: var(--text-secondary);
+    }
+
+    .schema-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 16px;
+      width: 100%;
+      max-width: 800px;
+      margin-bottom: 24px;
+    }
+
+    .schema-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      text-align: left;
+      transition: all 0.2s;
+    }
+
+    .schema-option:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .schema-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .schema-name {
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .schema-version {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .schema-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
   `],
 })
 export class ProjectTreeEditorComponent implements OnInit {
@@ -224,6 +338,7 @@ export class ProjectTreeEditorComponent implements OnInit {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private authState = inject(AuthStateService);
+  private schemaLoader = inject(SchemaLoaderService);
 
   // Inputs
   projectId = input.required<string>();
@@ -238,6 +353,11 @@ export class ProjectTreeEditorComponent implements OnInit {
   project = signal<Project | null>(null);
   treeNodes = signal<TreeNode[]>([]);
   backendNodes = signal<BackendNode[]>([]);
+  
+  // Schema initialization state
+  availableSchemas = signal<SchemaOption[]>([]);
+  loadingSchemas = signal(false);
+  initializingWithSchema = signal(false);
 
   constructor() {
     // Watch for projectId changes and reload project
@@ -298,11 +418,49 @@ export class ProjectTreeEditorComponent implements OnInit {
       const nodes = await this.api.getProjectNodes(this.projectId()).toPromise() as BackendNode[];
       this.backendNodes.set(nodes || []);
       this.treeNodes.set(this.convertToTreeNodes(nodes || []));
+      
+      // If project has no nodes, load available schemas
+      if (nodes && nodes.length === 0) {
+        await this.loadSchemas();
+      }
     } catch (err: any) {
       console.error('Failed to load nodes:', err);
       this.snackBar.open('Failed to load project nodes', 'Close', { duration: 3000 });
     }
   }
+
+  // ─── Schema Initialization ──────────────────────────────────────────────────
+
+  async loadSchemas(): Promise<void> {
+    this.loadingSchemas.set(true);
+    try {
+      const schemas = await this.schemaLoader.listSchemas();
+      this.availableSchemas.set(schemas);
+    } catch (err: any) {
+      console.error('Failed to load schemas:', err);
+      this.snackBar.open('Failed to load schemas', 'Close', { duration: 3000 });
+    } finally {
+      this.loadingSchemas.set(false);
+    }
+  }
+
+  async initializeWithSchema(schema: SchemaOption): Promise<void> {
+    this.initializingWithSchema.set(true);
+    try {
+      await this.schemaLoader.initializeProjectWithSchema(this.projectId(), schema.id);
+      this.snackBar.open(`Project initialized with ${schema.name}`, 'Close', { duration: 3000 });
+      
+      // Reload project and nodes
+      await this.loadProject();
+    } catch (err: any) {
+      console.error('Failed to initialize with schema:', err);
+      this.snackBar.open('Failed to initialize project with schema', 'Close', { duration: 5000 });
+    } finally {
+      this.initializingWithSchema.set(false);
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
 
   retry(): void {
     this.loadProject();
