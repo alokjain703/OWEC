@@ -90,6 +90,19 @@ export const routes: Routes = [
       import('./features/graph/graph.routes').then((m) => m.GRAPH_ROUTES),
   },
   {
+    path: 'relationships',
+    redirectTo: 'dashboard/user',
+    pathMatch: 'full'
+  },
+  {
+    path: 'projects/:projectId/relationships',
+    canActivate: [authGuard],
+    loadChildren: () =>
+      import('./features/relationships/relationships.routes').then(
+        (m) => m.RELATIONSHIP_ROUTES
+      ),
+  },
+  {
     path: 'projects/:projectId/schemas',
     redirectTo: '/schemas',
     pathMatch: 'full'
