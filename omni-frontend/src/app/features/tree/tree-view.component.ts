@@ -74,6 +74,15 @@ import { TreeNode } from './models/tree-node.model';
       flex: 1;
       overflow: hidden;
       padding: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tree-body-card ::ng-deep omni-project-tree-editor {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
 
     .no-project-state {

@@ -107,6 +107,9 @@ export class OmniApiService {
   listSchemas(): Observable<unknown[]> {
     return this.http.get<unknown[]>(`${this.base}/schemas`);
   }
+  getSchema(schemaId: string): Observable<unknown> {
+    return this.http.get(`${this.base}/schemas/${schemaId}`);
+  }
   createSchema(payload: unknown): Observable<unknown> {
     return this.http.post(`${this.base}/schemas`, payload);
   }
