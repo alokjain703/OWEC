@@ -20,10 +20,13 @@ import { MatInputModule } from '@angular/material/input';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSidenavModule } from '@angular/material/sidenav';
 import { OmniApiService } from '../../../core/services/omni-api.service';
 import { AuthStateService } from '../../../core/services/auth-state.service';
 import { SchemaLoaderService, SchemaOption } from '../services/schema-loader.service';
 import { TreeEditorComponent } from './tree-editor.component';
+import { NodeInspectorComponent } from './node-inspector.component';
+import { NodeContentEditorComponent } from './node-content-editor.component';
 import {
   TreeNode,
   NodeCreatedEvent,
@@ -96,7 +99,10 @@ interface Schema {
     MatDialogModule,
     MatMenuModule,
     MatSnackBarModule,
+    MatSidenavModule,
     TreeEditorComponent,
+    NodeInspectorComponent,
+    NodeContentEditorComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -127,62 +133,89 @@ interface Schema {
           </button>
         </div>
       } @else {
-        <!-- Project header -->
-        <div class="project-header">
-          <h2>{{ project()!.title }}</h2>
-          <button mat-icon-button [matMenuTriggerFor]="projectMenu" matTooltip="Project actions">
-            <mat-icon>more_vert</mat-icon>
-          </button>
-        </div>
+        <!-- Three-Panel Layout -->
+        <mat-sidenav-container class="editor-container">
+          
+          <!-- LEFT PANEL - Tree Editor -->
+          <mat-sidenav mode="side" opened class="tree-panel">
+            <div class="panel-header">
+              <h3>
+                <mat-icon>account_tree</mat-icon>
+                {{ project()!.title }}
+              </h3>
+              <button mat-icon-button [matMenuTriggerFor]="projectMenu" matTooltip="Project actions">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+            </div>
 
-        <!-- Tree editor or schema initialization -->
-        @if (treeNodes().length === 0) {
-          <!-- Schema selection for empty project -->
-          <div class="schema-selection">
-            <mat-icon class="schema-icon">account_tree</mat-icon>
-            <h3>Initialize Project Structure</h3>
-            <p>This project has no nodes yet. Choose a schema template to get started.</p>
-            
-            @if (loadingSchemas()) {
-              <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
-            } @else if (initializingWithSchema()) {
-              <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
-              <p>Initializing project with schema...</p>
-            } @else if (availableSchemas().length > 0) {
-              <div class="schema-list">
-                @for (schema of availableSchemas(); track schema.id) {
-                  <button mat-raised-button class="schema-option" (click)="initializeWithSchema(schema)">
-                    <mat-icon>folder_special</mat-icon>
-                    <div class="schema-info">
-                      <span class="schema-name">{{ schema.name }}</span>
-                      <span class="schema-version">v{{ schema.version }}</span>
-                    </div>
+            @if (treeNodes().length === 0) {
+              <!-- Schema selection for empty project -->
+              <div class="schema-selection">
+                <mat-icon class="schema-icon">account_tree</mat-icon>
+                <h4>Initialize Project</h4>
+                <p>Choose a schema template to get started.</p>
+                
+                @if (loadingSchemas()) {
+                  <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
+                } @else if (initializingWithSchema()) {
+                  <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
+                  <p>Initializing project...</p>
+                } @else if (availableSchemas().length > 0) {
+                  <div class="schema-list">
+                    @for (schema of availableSchemas(); track schema.id) {
+                      <button mat-raised-button class="schema-option" (click)="initializeWithSchema(schema)">
+                        <mat-icon>folder_special</mat-icon>
+                        <div class="schema-info">
+                          <span class="schema-name">{{ schema.name }}</span>
+                          <span class="schema-version">v{{ schema.version }}</span>
+                        </div>
+                      </button>
+                    }
+                  </div>
+                  <button mat-button (click)="loadSchemas()">
+                    <mat-icon>refresh</mat-icon>
+                    Refresh
+                  </button>
+                } @else {
+                  <button mat-raised-button color="primary" (click)="loadSchemas()">
+                    <mat-icon>refresh</mat-icon>
+                    Load Schemas
                   </button>
                 }
               </div>
-              <div class="schema-actions">
-                <button mat-button (click)="loadSchemas()">
-                  <mat-icon>refresh</mat-icon>
-                  Refresh Schemas
-                </button>
-              </div>
             } @else {
-              <p>No schemas available</p>
-              <button mat-raised-button color="primary" (click)="loadSchemas()">
-                <mat-icon>refresh</mat-icon>
-                Load Schemas
-              </button>
+              <omni-tree-editor
+                [nodes]="treeNodes()"
+                (nodeSelected)="handleNodeSelected($event)"
+                (nodeCreated)="handleNodeCreated($event)"
+                (nodeDeleted)="handleNodeDeleted($event)"
+                (nodeRenamed)="handleNodeRenamed($event)">
+              </omni-tree-editor>
             }
+          </mat-sidenav>
+
+          <!-- CENTER PANEL - Content Editor -->
+          <div class="content-panel">
+            <omni-node-content-editor
+              [node]="selectedNode()">
+            </omni-node-content-editor>
           </div>
-        } @else {
-          <omni-tree-editor
-            [nodes]="treeNodes()"
-            (nodeSelected)="handleNodeSelected($event)"
-            (nodeCreated)="handleNodeCreated($event)"
-            (nodeDeleted)="handleNodeDeleted($event)"
-            (nodeRenamed)="handleNodeRenamed($event)">
-          </omni-tree-editor>
-        }
+
+          <!-- RIGHT PANEL - Inspector -->
+          <mat-sidenav
+            position="end"
+            mode="side"
+            opened
+            class="inspector-panel">
+            <omni-node-inspector
+              [node]="selectedNode()"
+              (nodeSaved)="handleNodeSaved()"
+              (nodeDeleted)="handleInspectorNodeDeleted()"
+              (childNodeRequested)="handleChildNodeRequested($event)">
+            </omni-node-inspector>
+          </mat-sidenav>
+
+        </mat-sidenav-container>
       }
     </div>
 
@@ -199,21 +232,6 @@ interface Schema {
       flex-direction: column;
       height: 100%;
       overflow: hidden;
-    }
-
-    .project-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-      background: var(--omni-surface, white);
-    }
-
-    .project-header h2 {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 500;
     }
 
     .loading-state,
@@ -259,77 +277,117 @@ interface Schema {
       font-weight: 500;
     }
 
+    /* Three-Panel Layout */
+    .editor-container {
+      height: 100%;
+      flex: 1;
+    }
+
+    .tree-panel {
+      width: 300px;
+      border-right: 1px solid rgba(0, 0, 0, 0.12);
+    }
+
+    .inspector-panel {
+      width: 350px;
+      border-left: 1px solid rgba(0, 0, 0, 0.12);
+    }
+
+    .content-panel {
+      height: 100%;
+      background: #fafafa;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+      background: var(--omni-surface, white);
+    }
+
+    .panel-header h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .panel-header mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Schema Selection (in tree panel) */
     .schema-selection {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 48px 24px;
+      padding: 24px 16px;
       text-align: center;
     }
 
     .schema-icon {
-      font-size: 64px;
-      width: 64px;
-      height: 64px;
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
       color: var(--primary-500);
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       opacity: 0.7;
     }
 
-    .schema-selection h3 {
-      margin: 0 0 8px 0;
-      font-size: 20px;
+    .schema-selection h4 {
+      margin: 0 0 6px 0;
+      font-size: 16px;
       font-weight: 500;
     }
 
     .schema-selection p {
-      margin: 0 0 24px 0;
+      margin: 0 0 16px 0;
+      font-size: 13px;
       color: var(--text-secondary);
     }
 
     .schema-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
       width: 100%;
-      max-width: 800px;
-      margin-bottom: 24px;
+      margin-bottom: 12px;
     }
 
     .schema-option {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 16px;
+      gap: 8px;
+      padding: 12px;
       text-align: left;
+      width: 100%;
       transition: all 0.2s;
     }
 
     .schema-option:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transform: translateX(4px);
     }
 
     .schema-info {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 2px;
     }
 
     .schema-name {
       font-weight: 500;
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .schema-version {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-secondary);
-    }
-
-    .schema-actions {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
     }
   `],
 })
@@ -353,6 +411,7 @@ export class ProjectTreeEditorComponent implements OnInit {
   project = signal<Project | null>(null);
   treeNodes = signal<TreeNode[]>([]);
   backendNodes = signal<BackendNode[]>([]);
+  selectedNode = signal<TreeNode | null>(null);
   
   // Schema initialization state
   availableSchemas = signal<SchemaOption[]>([]);
@@ -473,6 +532,7 @@ export class ProjectTreeEditorComponent implements OnInit {
   // ─── Node Event Handlers ────────────────────────────────────────────────────
 
   handleNodeSelected(node: TreeNode): void {
+    this.selectedNode.set(node);
     this.nodeSelected.emit(node);
   }
 
@@ -522,6 +582,40 @@ export class ProjectTreeEditorComponent implements OnInit {
       console.error('Failed to rename node:', err);
       this.snackBar.open('Failed to rename node', 'Close', { duration: 3000 });
     }
+  }
+
+  // ─── Inspector Panel Event Handlers ─────────────────────────────────────────
+
+  async handleNodeSaved(): Promise<void> {
+    // Reload nodes to reflect changes
+    await this.loadNodes();
+    
+    // Update the selected node with fresh data
+    const currentlySelected = this.selectedNode();
+    if (currentlySelected) {
+      const updatedNode = this.findTreeNode(currentlySelected.id);
+      if (updatedNode) {
+        this.selectedNode.set(updatedNode);
+      }
+    }
+  }
+
+  async handleInspectorNodeDeleted(): Promise<void> {
+    // Clear selection
+    this.selectedNode.set(null);
+    
+    // Reload nodes
+    await this.loadNodes();
+  }
+
+  async handleChildNodeRequested(parentNode: TreeNode): Promise<void> {
+    const label = prompt('Enter child node name:');
+    if (!label) return;
+
+    await this.handleNodeCreated({ parentNode, label });
+    
+    // Reload to get the updated tree
+    await this.loadNodes();
   }
 
   // ─── Project Creation ───────────────────────────────────────────────────────
@@ -624,5 +718,19 @@ export class ProjectTreeEditorComponent implements OnInit {
       return null;
     };
     return search(this.backendNodes());
+  }
+
+  private findTreeNode(nodeId: string): TreeNode | null {
+    const search = (nodes: TreeNode[]): TreeNode | null => {
+      for (const node of nodes) {
+        if (node.id === nodeId) return node;
+        if (node.children) {
+          const found = search(node.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    return search(this.treeNodes());
   }
 }
