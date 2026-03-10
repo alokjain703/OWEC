@@ -17,10 +17,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
-import { CeGraphNode, CeGraphEdge } from '../models/ce-relationship.model';
+import * as d3 from 'd3';
 
-/** Minimal D3 types used in this component to avoid requiring @types/d3 */
-declare const d3: any; // D3 is loaded globally by the app
+import { CeGraphNode, CeGraphEdge } from '../models/ce-relationship.model';
 
 @Component({
   selector: 'ce-relationship-graph-preview',
@@ -50,12 +49,15 @@ declare const d3: any; // D3 is loaded globally by the app
           <mat-spinner diameter="32" />
         </div>
       } @else if (!nodes.length) {
-        <div class="graph-empty">
+        <div class="graph-empty" (click)="openFull.emit()">
           <mat-icon>device_hub</mat-icon>
           <span>No relationships</span>
         </div>
       } @else {
-        <svg #svgEl class="graph-svg"></svg>
+        <div class="graph-body" (click)="openFull.emit()" matTooltip="Open full graph">
+          <svg #svgEl class="graph-svg"></svg>
+          <div class="graph-overlay"><mat-icon>open_in_full</mat-icon></div>
+        </div>
         <div class="graph-stats">
           <span>{{ nodes.length }} nodes · {{ edges.length }} edges</span>
         </div>
@@ -117,6 +119,27 @@ declare const d3: any; // D3 is loaded globally by the app
     }
 
     .graph-empty mat-icon { opacity: 0.3; font-size: 32px; width: 32px; height: 32px; }
+    .graph-empty { cursor: pointer; }
+    .graph-empty:hover { background: rgba(255,255,255,0.04); }
+
+    .graph-body {
+      position: relative;
+      cursor: pointer;
+      display: block;
+    }
+
+    .graph-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.15s;
+      background: rgba(0,0,0,0.35);
+      mat-icon { font-size: 28px; width: 28px; height: 28px; color: #fff; }
+    }
+    .graph-body:hover .graph-overlay { opacity: 1; }
 
     .graph-stats {
       font-size: 11px;
@@ -145,9 +168,9 @@ export class CeRelationshipGraphPreviewComponent implements AfterViewInit, OnCha
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['nodes'] || changes['edges'] || changes['highlightNodeId']) {
-      if (this.svgRef) {
-        this.renderGraph();
-      }
+      // Defer so Angular's @if block has time to render <svg> into the DOM
+      // before we try to select it via @ViewChild
+      Promise.resolve().then(() => this.renderGraph());
     }
   }
 
@@ -157,7 +180,7 @@ export class CeRelationshipGraphPreviewComponent implements AfterViewInit, OnCha
 
   private renderGraph(): void {
     const svgEl = this.svgRef?.nativeElement;
-    if (!svgEl || !this.nodes.length || typeof d3 === 'undefined') return;
+    if (!svgEl || !this.nodes.length) return;
 
     // Clear previous render
     d3.select(svgEl).selectAll('*').remove();
@@ -221,7 +244,7 @@ export class CeRelationshipGraphPreviewComponent implements AfterViewInit, OnCha
       .attr('fill', 'rgba(255,255,255,0.7)')
       .text((d: any) => (d.label || d.id).slice(0, 14));
 
-    this.simulation = d3.forceSimulation(nodeData)
+    this.simulation = d3.forceSimulation<any>(nodeData)
       .force('link', d3.forceLink(linkData)
         .id((d: any) => d.id)
         .distance(50)
