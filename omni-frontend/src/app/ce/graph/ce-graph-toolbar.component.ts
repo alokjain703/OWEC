@@ -7,6 +7,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -44,6 +45,7 @@ export interface GraphFilter {
     MatChipsModule,
     MatSlideToggleModule,
     MatDividerModule,
+    RouterModule,
   ],
   template: `
     <div class="graph-toolbar">
@@ -54,6 +56,13 @@ export interface GraphFilter {
                 matTooltip="Create a new relationship">
           <mat-icon>add_link</mat-icon>
           <span class="btn-label">Relationship</span>
+        </button>
+
+        <button mat-stroked-button class="toolbar-btn"
+                routerLink="/ce/rel-types"
+                matTooltip="Manage relationship types">
+          <mat-icon>category</mat-icon>
+          <span class="btn-label">Rel Types</span>
         </button>
 
         <button mat-icon-button (click)="fitGraph.emit()" matTooltip="Fit graph to screen">

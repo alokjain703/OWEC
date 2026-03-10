@@ -10,6 +10,7 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
@@ -28,6 +29,7 @@ type InspectorMode = 'overview' | 'detail' | 'edit';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
+    RouterModule,
     MatButtonModule,
     MatIconModule,
     MatChipsModule,
@@ -107,6 +109,10 @@ type InspectorMode = 'overview' | 'detail' | 'edit';
               <mat-icon>device_hub</mat-icon>
               Open Graph
             </button>
+            <button mat-stroked-button class="action-btn" routerLink="/ce/rel-types">
+              <mat-icon>category</mat-icon>
+              Manage Rel Types
+            </button>
           </div>
         </div>
       }
@@ -165,6 +171,10 @@ type InspectorMode = 'overview' | 'detail' | 'edit';
             <button mat-stroked-button class="action-btn" (click)="openGraph.emit()">
               <mat-icon>device_hub</mat-icon>
               Open Graph
+            </button>
+            <button mat-stroked-button class="action-btn" routerLink="/ce/rel-types">
+              <mat-icon>category</mat-icon>
+              Manage Rel Types
             </button>
           </div>
         </div>

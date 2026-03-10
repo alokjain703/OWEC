@@ -379,6 +379,7 @@ export class AppComponent {
         { path: this.roleRouting.currentDashboard()?.route || '/dashboard/user', label: 'Dashboard', icon: 'dashboard', tooltip: 'User dashboard' },
         { path: '/schemas', label: 'Schemas', icon: 'schema', tooltip: 'Schema templates' },
         { path: '/ce', label: 'Character Engine', icon: 'auto_fix_high', tooltip: 'Character Engine' },
+        { path: '/ce/rel-types', label: 'Rel Types', icon: 'category', tooltip: 'Manage relationship types' },
       ];
     }
     
@@ -391,6 +392,7 @@ export class AppComponent {
       { path: `/projects/${projectId}/timeline`, label: 'Timeline', icon: 'timeline', tooltip: 'Chronological events' },
       { path: `/projects/${projectId}/graph`, label: 'Graph', icon: 'hub', tooltip: 'Relationship graph' },
       { path: '/ce', label: 'Character Engine', icon: 'auto_fix_high', tooltip: 'Character Engine' },
+      { path: '/ce/rel-types', label: 'Rel Types', icon: 'category', tooltip: 'Manage relationship types' },
     ];
   });
 
