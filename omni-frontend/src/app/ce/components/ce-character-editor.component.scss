@@ -15,6 +15,23 @@
   height: 28px;
 }
 
+.back-btn {
+  width: 34px;
+  height: 34px;
+  line-height: 34px;
+  margin-right: 4px;
+  vertical-align: middle;
+
+  mat-icon {
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+    font-variation-settings: 'wght' 600;
+    -webkit-text-stroke: 0.4px currentColor;
+  }
+}
+
 // Section scaffolding
 .section-label {
   display: flex;

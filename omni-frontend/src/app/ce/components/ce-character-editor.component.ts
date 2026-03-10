@@ -51,8 +51,15 @@ import { CeTraitEditorComponent } from './ce-trait-editor.component';
   template: `
     <mat-card class="ce-editor">
       <mat-card-header class="editor-header">
+        @if (isCreateMode()) {
+          <button mat-icon-button class="back-btn" (click)="goBack()" matTooltip="Back to characters">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+        }
         <mat-icon mat-card-avatar class="header-icon">{{ isCreateMode() ? 'person_add' : 'person' }}</mat-icon>
-        <mat-card-title>{{ isCreateMode() ? 'New Character' : (characterName() || entity()?.name || 'Character') }}</mat-card-title>
+        <mat-card-title>
+          {{ isCreateMode() ? 'New Character' : (characterName() || entity()?.name || 'Character') }}
+        </mat-card-title>
         <mat-card-subtitle>{{ isCreateMode() ? 'Fill in details and save to create' : (entity()?.id || '') }}</mat-card-subtitle>
       </mat-card-header>
 
@@ -213,6 +220,10 @@ export class CeCharacterEditorComponent implements OnInit {
     }
   }
 
+  goBack(): void {
+    this.router.navigate(['/ce']);
+  }
+
   reload(): void {
     if (!this.entityId) {
       return;
@@ -318,6 +329,13 @@ export class CeCharacterEditorComponent implements OnInit {
           next: () => {
             this.saving.set(false);
             this.snack.open('Character created!', undefined, { duration: 2500 });
+            // Clear form fields
+            this.characterName.set('');
+            this.newSchemaId.set('');
+            this.templateLevel.set('XS');
+            this.traitPackIds.set([]);
+            this.traitValues.set({});
+            this.resolvedTraits.set([]);
             // Navigate to edit page for the new entity
             this.router.navigate(['/ce/characters', created.id]);
           },
