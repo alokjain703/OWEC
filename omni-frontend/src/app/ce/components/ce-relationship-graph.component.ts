@@ -75,7 +75,7 @@ export class CeRelationshipGraphComponent implements OnInit, OnChanges {
         id: edge.id ?? `${edge.source}-${edge.target}-${edge.relationshipType}`,
         source: edge.source,
         target: edge.target,
-        type: edge.relationshipType,
+        type: edge.typeName || edge.relationshipType,
         data: edge,
       }))
     );

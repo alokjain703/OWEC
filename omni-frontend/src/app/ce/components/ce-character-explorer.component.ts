@@ -287,6 +287,7 @@ export class CeCharacterExplorerComponent implements OnInit {
           source: e.source,
           target: e.target,
           relationshipType: e.type || e.relationshipType || '',
+          typeName: e.type_name || e.typeName,
         }));
         this.graphEdges.set(adaptedEdges);
         this.graphLoading.set(false);

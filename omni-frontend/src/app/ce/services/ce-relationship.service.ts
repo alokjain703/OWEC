@@ -55,16 +55,17 @@ export class CeRelationshipService {
     return this.http.delete<void>(`${this.base}/relationships/types/${id}`);
   }
 
-  getGraph(): Observable<{ nodes: CeGraphNode[]; edges: { source: string; target: string; type: string }[] }> {
-    return this.http.get<{ nodes: CeGraphNode[]; edges: { source: string; target: string; type: string }[] }>(`${this.base}/graph`);
+  getGraph(): Observable<{ nodes: CeGraphNode[]; edges: { id?: string; source: string; target: string; type: string; type_name?: string }[] }> {
+    return this.http.get<{ nodes: CeGraphNode[]; edges: { id?: string; source: string; target: string; type: string; type_name?: string }[] }>(`${this.base}/graph`);
   }
 
-  mapGraphEdges(edges: { id?: string; source: string; target: string; type: string }[]): CeGraphEdge[] {
+  mapGraphEdges(edges: { id?: string; source: string; target: string; type: string; type_name?: string }[]): CeGraphEdge[] {
     return edges.map((edge) => ({
       id: edge.id ?? `${edge.source}-${edge.target}-${edge.type}`,
       source: edge.source,
       target: edge.target,
       relationshipType: edge.type,
+      typeName: edge.type_name,
     }));
   }
 

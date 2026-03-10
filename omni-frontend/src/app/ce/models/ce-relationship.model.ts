@@ -24,4 +24,5 @@ export interface CeGraphEdge {
   source: string;
   target: string;
   relationshipType: string;
+  typeName?: string;
 }

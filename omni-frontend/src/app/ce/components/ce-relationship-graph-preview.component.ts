@@ -196,14 +196,14 @@ export class CeRelationshipGraphPreviewComponent implements AfterViewInit, OnCha
       .attr('viewBox', `0 0 ${width} ${height}`)
       .attr('preserveAspectRatio', 'xMidYMid meet');
 
-    // Arrow marker
+    // Arrow marker (tip at node boundary: refX = radius + arrow length)
     svg.append('defs').append('marker')
       .attr('id', 'ce-arrow')
       .attr('viewBox', '0 -4 8 8')
-      .attr('refX', 14)
+      .attr('refX', 8)
       .attr('refY', 0)
-      .attr('markerWidth', 6)
-      .attr('markerHeight', 6)
+      .attr('markerWidth', 5)
+      .attr('markerHeight', 5)
       .attr('orient', 'auto')
       .append('path')
       .attr('d', 'M0,-4L8,0L0,4')
@@ -212,14 +212,49 @@ export class CeRelationshipGraphPreviewComponent implements AfterViewInit, OnCha
     const linkData = this.edges.map((e) => ({ ...e }));
     const nodeData = this.nodes.map((n) => ({ ...n }));
 
+    // Build parallel-edge curvature offsets (keyed by edge id)
+    // Directed pair src→tgt: n=1 keeps a gentle arc (0.8); n≥2 fans out symmetrically.
+    const offMap = new Map<string, number>();
+    {
+      const groups = new Map<string, string[]>();
+      for (const e of linkData as any[]) {
+        const src = typeof e.source === 'string' ? e.source : (e.source as any).id;
+        const tgt = typeof e.target === 'string' ? e.target : (e.target as any).id;
+        const key = `${src}\x00${tgt}`;
+        const g = groups.get(key) ?? [];
+        g.push(e.id);
+        groups.set(key, g);
+      }
+      for (const ids of groups.values()) {
+        const n = ids.length;
+        ids.forEach((id, i) => offMap.set(id, n === 1 ? 0.8 : (i - (n - 1) / 2)));
+      }
+    }
+
     const link = svg.append('g')
-      .selectAll('line')
+      .selectAll('path')
       .data(linkData)
-      .join('line')
+      .join('path')
+      .attr('fill', 'none')
       .attr('stroke', '#7c5cbf')
-      .attr('stroke-opacity', 0.5)
-      .attr('stroke-width', 1)
+      .attr('stroke-opacity', 0.6)
+      .attr('stroke-width', 1.5)
       .attr('marker-end', 'url(#ce-arrow)');
+
+    const edgeLabel = svg.append('g')
+      .selectAll('text')
+      .data(linkData)
+      .join('text')
+      .attr('text-anchor', 'middle')
+      .attr('font-size', 8)
+      .attr('fill', 'rgba(255,255,255,0.55)')
+      .attr('pointer-events', 'none')
+      .text((d: any) => {
+        const name = d.typeName || d.relationshipType || '';
+        // Trim schema prefix: character.friend → friend
+        const parts = name.split('.');
+        return parts[parts.length - 1].slice(0, 12);
+      });
 
     const node = svg.append('g')
       .selectAll('g')
@@ -253,11 +288,28 @@ export class CeRelationshipGraphPreviewComponent implements AfterViewInit, OnCha
       .force('center', d3.forceCenter(width / 2, height / 2))
       .force('collision', d3.forceCollide(radius + 8))
       .on('tick', () => {
-        link
-          .attr('x1', (d: any) => d.source.x)
-          .attr('y1', (d: any) => d.source.y)
-          .attr('x2', (d: any) => d.target.x)
-          .attr('y2', (d: any) => d.target.y);
+        // Helper: compute arc points for a given edge datum (called after D3 resolves source/target)
+        const arcPoints = (d: any) => {
+          const sx = d.source.x, sy = d.source.y;
+          const tx = d.target.x, ty = d.target.y;
+          const dx = tx - sx, dy = ty - sy;
+          const len = Math.sqrt(dx * dx + dy * dy) || 1;
+          const r = radius + 3;
+          const ex = tx - (dx / len) * r, ey = ty - (dy / len) * r;
+          const mult = offMap.get(d.id) ?? 0.8;
+          const off = mult * 25;
+          const cx = (sx + ex) / 2 - (dy / len) * off;
+          const cy = (sy + ey) / 2 + (dx / len) * off;
+          return { sx, sy, ex, ey, cx, cy };
+        };
+
+        link.attr('d', (d: any) => {
+          const { sx, sy, ex, ey, cx, cy } = arcPoints(d);
+          return `M ${sx} ${sy} Q ${cx} ${cy} ${ex} ${ey}`;
+        });
+        edgeLabel
+          .attr('x', (d: any) => { const { sx, cx, ex } = arcPoints(d); return 0.25 * sx + 0.5 * cx + 0.25 * ex; })
+          .attr('y', (d: any) => { const { sy, cy, ey } = arcPoints(d); return 0.25 * sy + 0.5 * cy + 0.25 * ey - 3; });
 
         node.attr('transform', (d: any) => `translate(${d.x},${d.y})`);
       });

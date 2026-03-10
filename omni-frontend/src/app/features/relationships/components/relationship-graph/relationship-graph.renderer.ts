@@ -13,6 +13,7 @@ export class GraphRenderer {
   private simulation: d3.Simulation<OmniGraphNode, OmniGraphEdge> | null = null;
   private nodes: OmniGraphNode[] = [];
   private edges: OmniGraphEdge[] = [];
+  private edgeOffsets = new Map<string, number>();
   private config: Required<GraphConfig>;
 
   // Event callbacks
@@ -47,6 +48,19 @@ export class GraphRenderer {
       .attr('width', this.config.width)
       .attr('height', this.config.height)
       .attr('viewBox', `0 0 ${this.config.width} ${this.config.height}`);
+
+    // Arrow marker for directed edges
+    this.svg.append('defs').append('marker')
+      .attr('id', 'omni-arrow')
+      .attr('viewBox', '0 -4 8 8')
+      .attr('refX', 8)
+      .attr('refY', 0)
+      .attr('markerWidth', 5)
+      .attr('markerHeight', 5)
+      .attr('orient', 'auto')
+      .append('path')
+      .attr('d', 'M0,-4L8,0L0,4')
+      .attr('fill', '#999');
 
     // Create main group for zoom/pan
     this.g = this.svg.append('g').attr('class', 'graph-container');
@@ -91,6 +105,9 @@ export class GraphRenderer {
       linkForce.links(this.edges);
     }
 
+    // Compute curvature offsets for parallel edges
+    this.buildEdgeOffsets();
+
     // Render edges
     this.renderEdges();
 
@@ -129,11 +146,13 @@ export class GraphRenderer {
 
     // Add new edges
     const linkEnter = link.enter()
-      .append('line')
+      .append('path')
       .attr('class', 'link')
+      .attr('fill', 'none')
       .attr('stroke', '#999')
       .attr('stroke-width', 2)
       .attr('stroke-opacity', 0.6)
+      .attr('marker-end', 'url(#omni-arrow)')
       .style('cursor', 'pointer');
 
     // Handle edge clicks
@@ -236,7 +255,10 @@ export class GraphRenderer {
       .attr('font-family', 'Roboto, sans-serif')
       .attr('fill', '#666')
       .attr('pointer-events', 'none')
-      .text((d) => d.type);
+      .text((d) => {
+        const parts = (d.type || '').split('.');
+        return parts[parts.length - 1];
+      });
 
     // Merge
     edgeLabel.merge(edgeLabelEnter as any);
@@ -248,12 +270,9 @@ export class GraphRenderer {
   private onTick(): void {
     if (!this.g) return;
 
-    // Update link positions
-    this.g.selectAll<SVGLineElement, OmniGraphEdge>('.link')
-      .attr('x1', (d) => (d.source as OmniGraphNode).x!)
-      .attr('y1', (d) => (d.source as OmniGraphNode).y!)
-      .attr('x2', (d) => (d.target as OmniGraphNode).x!)
-      .attr('y2', (d) => (d.target as OmniGraphNode).y!);
+    // Update link (arc) positions
+    this.g.selectAll<SVGPathElement, OmniGraphEdge>('.link')
+      .attr('d', (d) => this.makePathD(d));
 
     // Update node positions
     this.g.selectAll<SVGCircleElement, OmniGraphNode>('.node')
@@ -265,10 +284,67 @@ export class GraphRenderer {
       .attr('x', (d) => d.x!)
       .attr('y', (d) => d.y!);
 
-    // Update edge label positions
+    // Update edge label positions (arc midpoint)
     this.g.selectAll<SVGTextElement, OmniGraphEdge>('.edge-label')
-      .attr('x', (d) => ((d.source as OmniGraphNode).x! + (d.target as OmniGraphNode).x!) / 2)
-      .attr('y', (d) => ((d.source as OmniGraphNode).y! + (d.target as OmniGraphNode).y!) / 2);
+      .attr('x', (d) => this.midpointOf(d).x)
+      .attr('y', (d) => this.midpointOf(d).y);
+  }
+
+  /** Compute a quadratic bezier arc from source to target (ending at node boundary). */
+  private makePathD(d: OmniGraphEdge): string {
+    const src = d.source as OmniGraphNode;
+    const tgt = d.target as OmniGraphNode;
+    const sx = src.x!, sy = src.y!;
+    const tx = tgt.x!, ty = tgt.y!;
+    const dx = tx - sx, dy = ty - sy;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    const r = this.config.nodeRadius + 4;
+    const ex = tx - (dx / len) * r;
+    const ey = ty - (dy / len) * r;
+    const mult = this.edgeOffsets.get(d.id) ?? 0.8;
+    const offset = mult * Math.min(len * 0.25, 35);
+    const cx = (sx + ex) / 2 - (dy / len) * offset;
+    const cy = (sy + ey) / 2 + (dx / len) * offset;
+    return `M ${sx} ${sy} Q ${cx} ${cy} ${ex} ${ey}`;
+  }
+
+  /** Midpoint on the quadratic bezier arc (t=0.5). */
+  private midpointOf(d: OmniGraphEdge): { x: number; y: number } {
+    const src = d.source as OmniGraphNode;
+    const tgt = d.target as OmniGraphNode;
+    const sx = src.x!, sy = src.y!;
+    const tx = tgt.x!, ty = tgt.y!;
+    const dx = tx - sx, dy = ty - sy;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    const r = this.config.nodeRadius + 4;
+    const ex = tx - (dx / len) * r;
+    const ey = ty - (dy / len) * r;
+    const mult = this.edgeOffsets.get(d.id) ?? 0.8;
+    const offset = mult * Math.min(len * 0.25, 35);
+    const cx = (sx + ex) / 2 - (dy / len) * offset;
+    const cy = (sy + ey) / 2 + (dx / len) * offset;
+    return { x: 0.25 * sx + 0.5 * cx + 0.25 * ex, y: 0.25 * sy + 0.5 * cy + 0.25 * ey };
+  }
+
+  /**
+   * Build a map: edgeId → curvature multiplier to spread parallel (same directed pair) edges apart.
+   * n=1 → 0.8 (gentle natural curve); n≥2 → centred spread: -0.5, +0.5 / -1, 0, +1 etc.
+   */
+  private buildEdgeOffsets(): void {
+    const groups = new Map<string, string[]>();
+    for (const e of this.edges) {
+      const src = typeof e.source === 'object' ? (e.source as OmniGraphNode).id : e.source as string;
+      const tgt = typeof e.target === 'object' ? (e.target as OmniGraphNode).id : e.target as string;
+      const key = `${src}\x00${tgt}`;
+      const g = groups.get(key) ?? [];
+      g.push(e.id);
+      groups.set(key, g);
+    }
+    this.edgeOffsets.clear();
+    for (const ids of groups.values()) {
+      const n = ids.length;
+      ids.forEach((id, i) => this.edgeOffsets.set(id, n === 1 ? 0.8 : (i - (n - 1) / 2)));
+    }
   }
 
   /**
