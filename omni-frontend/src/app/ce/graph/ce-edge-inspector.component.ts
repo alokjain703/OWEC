@@ -50,7 +50,7 @@ import { CeRelationshipService } from '../services/ce-relationship.service';
           <mat-icon>link</mat-icon>
         </div>
         <div class="header-text">
-          <h3 class="edge-label">{{ edgeType() }}</h3>
+          <h3 class="edge-label">{{ edgeTypeLabel }}</h3>
           <span class="edge-sub">Relationship</span>
         </div>
       </div>
@@ -77,7 +77,7 @@ import { CeRelationshipService } from '../services/ce-relationship.service';
         @if (!isEditing()) {
           <div class="prop-row">
             <span class="prop-label">Type</span>
-            <mat-chip class="type-chip">{{ edgeType() }}</mat-chip>
+            <mat-chip class="type-chip">{{ edgeTypeLabel }}</mat-chip>
           </div>
           @if (relationship()?.metadata) {
             <div class="prop-row">
@@ -94,6 +94,19 @@ import { CeRelationshipService } from '../services/ce-relationship.service';
                 <mat-option [value]="rt.id">{{ rt.name }}</mat-option>
               }
             </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Metadata (JSON)</mat-label>
+            <textarea matInput
+                      [(ngModel)]="editedMetadataStr"
+                      (ngModelChange)="onMetadataChange()"
+                      rows="5"
+                      class="meta-textarea"
+                      placeholder='{ "key": "value" }'></textarea>
+            @if (metadataError()) {
+              <mat-error>{{ metadataError() }}</mat-error>
+            }
           </mat-form-field>
 
           @if (flipped()) {
@@ -127,7 +140,7 @@ import { CeRelationshipService } from '../services/ce-relationship.service';
             <mat-icon>delete</mat-icon>
           </button>
         } @else {
-          <button mat-raised-button color="primary" [disabled]="saving()"
+          <button mat-raised-button color="primary" [disabled]="saving() || !!metadataError()"
                   (click)="saveEdit()">
             @if (saving()) { <mat-spinner diameter="18" /> } @else { Save }
           </button>
@@ -203,10 +216,16 @@ import { CeRelationshipService } from '../services/ce-relationship.service';
       font-size: 11px; font-family: monospace;
       background: var(--omni-surface, #f6f6f6);
       padding: 4px 6px; border-radius: 4px;
-      max-width: 200px; overflow: auto;
+      max-width: 200px; overflow: auto; margin: 0;
     }
 
-    .full-width { width: 100%; }
+    .meta-textarea {
+      font-size: 11px; font-family: monospace;
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .full-width { width: 100%; margin-bottom: 2rem; }
 
     .flip-hint {
       display: flex; align-items: center; gap: 6px;
@@ -249,27 +268,40 @@ export class CeEdgeInspectorComponent implements OnChanges {
   saving = signal(false);
   saveError = signal('');
   editedType = '';
+  editedMetadataStr = '';
+  metadataError = signal('');
 
   /** True when the form is in edit mode (type change or flip pending) */
   isEditing = this.editingType;
+
+  /** Resolves the raw type value (ID or slug) to a human-readable name. */
+  get edgeTypeLabel(): string {
+    const val = this.edgeType();
+    return this.relTypes.find((rt) => rt.id === val)?.name || val || '—';
+  }
 
   constructor(private relSvc: CeRelationshipService) {}
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['edge'] || changes['entities'] || changes['relationships']) {
       const edgeId = this.edge?.id as string;
-      // Primary lookup: match by relationship UUID stored in edge.id
-      // Fallback: use edge.data if buildGraph populated it
-      const rel =
-        this.relationships.find((r) => r.id === edgeId) ??
-        (this.edge?.data as CeRelationship | undefined) ??
-        null;
-      this._relationship.set(rel);
-
       const sourceId = typeof this.edge?.source === 'string'
         ? this.edge.source : (this.edge?.source as any)?.id;
       const targetId = typeof this.edge?.target === 'string'
         ? this.edge.target : (this.edge?.target as any)?.id;
+      const edgeRelType = (this.edge?.data as any)?.relationshipType ?? this.edge?.type;
+
+      // 1) Direct UUID match
+      // 2) Source + target + type match (when edge.id is composite)
+      // 3) edge.data if it happens to be a full CeRelationship
+      const rel =
+        this.relationships.find((r) => r.id === edgeId) ??
+        this.relationships.find((r) =>
+          r.source === sourceId && r.target === targetId && r.type === edgeRelType
+        ) ??
+        (this.edge?.data as CeRelationship | undefined) ??
+        null;
+      this._relationship.set(rel);
 
       this._sourceName.set(this.entities.find((e) => e.id === sourceId)?.name || sourceId || '—');
       this._targetName.set(this.entities.find((e) => e.id === targetId)?.name || targetId || '—');
@@ -282,13 +314,23 @@ export class CeEdgeInspectorComponent implements OnChanges {
 
   startEdit(): void {
     this.editedType = this.edgeType();
+    this.editedMetadataStr = this._relationship()?.metadata
+      ? JSON.stringify(this._relationship()!.metadata, null, 2)
+      : '';
+    this.metadataError.set('');
     this.editingType.set(true);
     this.saveError.set('');
   }
 
   startFlip(): void {
     this.flipped.set(!this.flipped());
-    if (!this.editedType) this.editedType = this.edgeType();
+    if (!this.editedType) {
+      this.editedType = this.edgeType();
+      this.editedMetadataStr = this._relationship()?.metadata
+        ? JSON.stringify(this._relationship()!.metadata, null, 2)
+        : '';
+      this.metadataError.set('');
+    }
     this.editingType.set(true);
     this.saveError.set('');
   }
@@ -297,17 +339,47 @@ export class CeEdgeInspectorComponent implements OnChanges {
     this.editingType.set(false);
     this.flipped.set(false);
     this.editedType = '';
+    this.editedMetadataStr = '';
+    this.metadataError.set('');
     this.saveError.set('');
+  }
+
+  onMetadataChange(): void {
+    if (!this.editedMetadataStr.trim()) {
+      this.metadataError.set('');
+      return;
+    }
+    try {
+      JSON.parse(this.editedMetadataStr);
+      this.metadataError.set('');
+    } catch {
+      this.metadataError.set('Invalid JSON');
+    }
   }
 
   saveEdit(): void {
     const rel = this._relationship();
     if (!rel) return;
+
+    // Validate metadata JSON before sending
+    let parsedMetadata: Record<string, unknown> | undefined;
+    if (this.editedMetadataStr.trim()) {
+      try {
+        parsedMetadata = JSON.parse(this.editedMetadataStr);
+      } catch {
+        this.metadataError.set('Invalid JSON — fix before saving');
+        return;
+      }
+    } else {
+      parsedMetadata = undefined;
+    }
+
     this.saving.set(true);
     this.saveError.set('');
 
     const update: Partial<CeRelationship> = {
       type: this.editedType || rel.type,
+      metadata: parsedMetadata,
     };
     if (this.flipped()) {
       update.source = rel.target;
@@ -319,6 +391,8 @@ export class CeEdgeInspectorComponent implements OnChanges {
         this.saving.set(false);
         this.editingType.set(false);
         this.flipped.set(false);
+        this.editedMetadataStr = '';
+        this.metadataError.set('');
         this.edgeType.set(updated.type);
         this.edited.emit(updated);
       },

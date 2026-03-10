@@ -105,6 +105,21 @@ import { CeRelationshipService } from '../services/ce-relationship.service';
           }
         </mat-form-field>
 
+        <!-- Metadata -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Metadata (JSON, optional)</mat-label>
+          <mat-icon matPrefix>data_object</mat-icon>
+          <textarea matInput
+                    [(ngModel)]="metadataStr"
+                    (ngModelChange)="onMetadataChange()"
+                    rows="4"
+                    style="font-family: monospace; font-size: 12px;"
+                    placeholder='{ "key": "value" }'></textarea>
+          @if (metadataError()) {
+            <mat-error>{{ metadataError() }}</mat-error>
+          }
+        </mat-form-field>
+
         @if (error()) {
           <p class="error-msg">
             <mat-icon class="err-icon">error_outline</mat-icon>
@@ -121,7 +136,7 @@ import { CeRelationshipService } from '../services/ce-relationship.service';
           Cancel
         </button>
         <button mat-raised-button color="primary"
-                [disabled]="!sourceId || !targetId || !relType || saving()"
+                [disabled]="!sourceId || !targetId || !relType || saving() || !!metadataError()"
                 (click)="submit()">
           @if (saving()) {
             <mat-spinner diameter="18" />
@@ -226,6 +241,8 @@ export class CeCreateRelationshipPanelComponent implements OnChanges {
   sourceId = '';
   targetId = '';
   relType = '';
+  metadataStr = '';
+  metadataError = signal('');
   saving = signal(false);
   error = signal('');
 
@@ -240,19 +257,38 @@ export class CeCreateRelationshipPanelComponent implements OnChanges {
     }
   }
 
+  onMetadataChange(): void {
+    if (!this.metadataStr.trim()) { this.metadataError.set(''); return; }
+    try { JSON.parse(this.metadataStr); this.metadataError.set(''); }
+    catch { this.metadataError.set('Invalid JSON'); }
+  }
+
   submit(): void {
     if (!this.sourceId || !this.targetId || !this.relType) return;
+
+    let metadata: Record<string, unknown> | undefined;
+    if (this.metadataStr.trim()) {
+      try {
+        metadata = JSON.parse(this.metadataStr);
+      } catch {
+        this.metadataError.set('Invalid JSON — fix before saving');
+        return;
+      }
+    }
+
     this.saving.set(true);
     this.error.set('');
 
     this.relSvc
-      .createRelationship({ id: '', type: this.relType, source: this.sourceId, target: this.targetId })
+      .createRelationship({ id: '', type: this.relType, source: this.sourceId, target: this.targetId, metadata })
       .subscribe({
         next: (rel) => {
           this.saving.set(false);
           this.created.emit(rel);
           // Reset form for next use
           this.targetId = '';
+          this.metadataStr = '';
+          this.metadataError.set('');
           this.relType = this.relTypes[0]?.id ?? '';
         },
         error: (err) => {

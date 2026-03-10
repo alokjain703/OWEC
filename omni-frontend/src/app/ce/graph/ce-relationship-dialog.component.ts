@@ -91,6 +91,21 @@ export interface CeRelationshipDialogData {
         }
       </mat-form-field>
 
+      <!-- Metadata -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Metadata (JSON, optional)</mat-label>
+        <mat-icon matPrefix>data_object</mat-icon>
+        <textarea matInput
+                  [(ngModel)]="metadataStr"
+                  (ngModelChange)="onMetadataChange()"
+                  rows="4"
+                  style="font-family: monospace; font-size: 12px;"
+                  placeholder='{ "key": "value" }'></textarea>
+        @if (metadataError()) {
+          <mat-error>{{ metadataError() }}</mat-error>
+        }
+      </mat-form-field>
+
       @if (error()) {
         <p class="error-msg">{{ error() }}</p>
       }
@@ -99,7 +114,7 @@ export interface CeRelationshipDialogData {
     <mat-dialog-actions align="end">
       <button mat-stroked-button mat-dialog-close>Cancel</button>
       <button mat-raised-button color="primary"
-              [disabled]="!sourceId || !targetId || !relType || saving()"
+              [disabled]="!sourceId || !targetId || !relType || saving() || !!metadataError()"
               (click)="submit()">
         @if (saving()) { <mat-spinner diameter="18" /> }
         @else { Create }
@@ -139,6 +154,8 @@ export class CeRelationshipDialogComponent {
   sourceId: string;
   targetId: string;
   relType = '';
+  metadataStr = '';
+  metadataError = signal('');
   saving = signal(false);
   error = signal('');
 
@@ -154,8 +171,25 @@ export class CeRelationshipDialogComponent {
     }
   }
 
+  onMetadataChange(): void {
+    if (!this.metadataStr.trim()) { this.metadataError.set(''); return; }
+    try { JSON.parse(this.metadataStr); this.metadataError.set(''); }
+    catch { this.metadataError.set('Invalid JSON'); }
+  }
+
   submit(): void {
     if (!this.sourceId || !this.targetId || !this.relType) return;
+
+    let metadata: Record<string, unknown> | undefined;
+    if (this.metadataStr.trim()) {
+      try {
+        metadata = JSON.parse(this.metadataStr);
+      } catch {
+        this.metadataError.set('Invalid JSON — fix before saving');
+        return;
+      }
+    }
+
     this.saving.set(true);
     this.error.set('');
 
@@ -164,6 +198,7 @@ export class CeRelationshipDialogComponent {
       type: this.relType,
       source: this.sourceId,
       target: this.targetId,
+      metadata,
     };
 
     this.relSvc.createRelationship(payload).subscribe({
