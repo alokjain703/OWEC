@@ -48,10 +48,10 @@ interface NavItem {
         fixedInViewport>
 
         <!-- Logo / brand -->
-        <div class="omni-brand">
+        <a class="omni-brand" routerLink="/dashboard/user">
           <mat-icon class="brand-icon">auto_stories</mat-icon>
           <span class="brand-text">OMNI</span>
-        </div>
+        </a>
 
         <mat-divider />
 
@@ -199,6 +199,8 @@ interface NavItem {
       align-items: center;
       gap: 10px;
       padding: 20px 16px 16px;
+      text-decoration: none;
+      cursor: pointer;
     }
     .brand-icon { color: var(--omni-accent-light); font-size: 28px; }
     .brand-text {
@@ -207,6 +209,10 @@ interface NavItem {
       letter-spacing: 3px;
       color: var(--omni-accent-light);
     }
+    .omni-brand:hover .brand-text,
+    .omni-brand:visited .brand-text { color: var(--omni-accent-light); }
+    .omni-brand:hover .brand-icon,
+    .omni-brand:visited .brand-icon { color: var(--omni-accent-light); }
 
     .omni-nav-list { padding-top: 8px; flex: 1; }
 
@@ -372,6 +378,7 @@ export class AppComponent {
       return [
         { path: this.roleRouting.currentDashboard()?.route || '/dashboard/user', label: 'Dashboard', icon: 'dashboard', tooltip: 'User dashboard' },
         { path: '/schemas', label: 'Schemas', icon: 'schema', tooltip: 'Schema templates' },
+        { path: '/ce', label: 'Character Engine', icon: 'auto_fix_high', tooltip: 'Character Engine' },
       ];
     }
     
@@ -383,6 +390,7 @@ export class AppComponent {
       { path: `/projects/${projectId}/characters`, label: 'Characters', icon: 'people', tooltip: 'Character entity map' },
       { path: `/projects/${projectId}/timeline`, label: 'Timeline', icon: 'timeline', tooltip: 'Chronological events' },
       { path: `/projects/${projectId}/graph`, label: 'Graph', icon: 'hub', tooltip: 'Relationship graph' },
+      { path: '/ce', label: 'Character Engine', icon: 'auto_fix_high', tooltip: 'Character Engine' },
     ];
   });
 

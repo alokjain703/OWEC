@@ -1,6 +1,6 @@
 {
   "/api": {
-    "target": "http://backend:8052",
+    "target": "http://omni-backend:8052",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug",

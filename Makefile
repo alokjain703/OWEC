@@ -21,7 +21,7 @@ DB_DIR       := omni-db
 
 # Docker Compose service names (must match docker-compose.yml)
 SVC_DB       := postgres
-SVC_BACKEND  := backend
+SVC_BACKEND  := omni-backend
 SVC_FRONTEND := frontend
 
 # ── Colours ───────────────────────────────────────────────────────────────────
@@ -38,6 +38,7 @@ RESET := \033[0m
         backend-install backend-dev backend-lint backend-typecheck backend-test \
         migrate migrate-new migrate-down migrate-history migrate-current \
         frontend-install frontend-dev frontend-build \
+        check check-wait \
         up down
 
 # ── Help ─────────────────────────────────────────────────────────────────────
@@ -51,7 +52,8 @@ help:
 	@echo "    restart            Restart all 3 services"
 	@echo "    status             Show running container status"
 	@echo "    logs               Tail logs for all services"
-	@echo ""
+	@echo "    check              Run health checks once (db + backend + frontend)"
+	@echo "    check-wait         Wait up to 90s for all services to become healthy"
 	@echo "  $(GREEN)omni-db$(RESET)"
 	@echo "    start-db           Start PostgreSQL container (port 5483)"
 	@echo "    stop-db            Stop PostgreSQL container"
@@ -120,6 +122,15 @@ up:   start
 down:
 	@echo "$(YELLOW)■ Stopping and removing all services…$(RESET)"
 	docker compose down
+
+# ══════════════════════════════════════════════════════════════════════════════
+# HEALTH CHECK
+# ══════════════════════════════════════════════════════════════════════════════
+check:
+	@bash scripts/healthcheck.sh
+
+check-wait:
+	@bash scripts/healthcheck.sh --wait --timeout 90
 
 # ══════════════════════════════════════════════════════════════════════════════
 # omni-db  ── start / stop / restart / logs / shell

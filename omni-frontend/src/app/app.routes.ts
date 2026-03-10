@@ -103,6 +103,12 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'ce',
+    canActivate: [authGuard],
+    loadChildren: () =>
+      import('./ce/ce.routes').then((m) => m.CE_ROUTES),
+  },
+  {
     path: 'projects/:projectId/schemas',
     redirectTo: '/schemas',
     pathMatch: 'full'

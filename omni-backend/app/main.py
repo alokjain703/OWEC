@@ -2,6 +2,7 @@
 OMNI Backend – Application Entry Point
 """
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config.settings import settings
 from app.db.session import engine, Base
 from app.api.v1.router import api_router
+from app.modules.ce.router import router as ce_router
 
 
 @asynccontextmanager
@@ -44,6 +46,17 @@ def create_application() -> FastAPI:
 
     # ── Routers ───────────────────────────────────────────────────────────────
     application.include_router(api_router, prefix="/api/v1")
+    # CE alias without version prefix
+    application.include_router(ce_router, prefix="/api")
+
+    # ── Health ────────────────────────────────────────────────────────────────
+    @application.get("/health", tags=["health"], include_in_schema=True)
+    async def health_check():
+        return {
+            "status": "ok",
+            "service": "omni-backend",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
 
     return application
 
