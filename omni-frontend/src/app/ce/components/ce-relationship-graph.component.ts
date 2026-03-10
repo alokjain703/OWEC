@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnInit, Output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 
@@ -30,7 +30,7 @@ import { CeRelationshipService } from '../services/ce-relationship.service';
   styleUrl: './ce-relationship-graph.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CeRelationshipGraphComponent implements OnInit {
+export class CeRelationshipGraphComponent implements OnInit, OnChanges {
   @Input() nodes: CeGraphNode[] | null = null;
   @Input() edges: CeGraphEdge[] | null = null;
   @Output() nodeSelected = new EventEmitter<OmniGraphNode>();
@@ -39,16 +39,26 @@ export class CeRelationshipGraphComponent implements OnInit {
   graphNodes = signal<OmniGraphNode[]>([]);
   graphEdges = signal<OmniGraphEdge[]>([]);
 
+  private selfLoaded = false;
+
   constructor(private relationships: CeRelationshipService) {}
 
   ngOnInit(): void {
-    if (this.nodes && this.edges) {
-      this.setGraph(this.nodes, this.edges);
-      return;
+    // Only fetch from the service when no external data is provided
+    if (!this.nodes && !this.edges) {
+      this.selfLoaded = true;
+      this.relationships.getGraph().subscribe((graph) => {
+        this.setGraph(graph.nodes, this.relationships.mapGraphEdges(graph.edges));
+      });
     }
-    this.relationships.getGraph().subscribe((graph) => {
-      this.setGraph(graph.nodes, this.relationships.mapGraphEdges(graph.edges));
-    });
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // Re-render whenever inputs are updated from a parent (graph workspace)
+    if ((changes['nodes'] || changes['edges']) && (this.nodes || this.edges)) {
+      this.selfLoaded = false;
+      this.setGraph(this.nodes ?? [], this.edges ?? []);
+    }
   }
 
   private setGraph(nodes: CeGraphNode[], edges: CeGraphEdge[]): void {

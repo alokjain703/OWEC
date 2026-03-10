@@ -27,6 +27,7 @@ import { CeCharacterTreeComponent, CeTreeFilter } from './ce-character-tree.comp
 import { CeCharacterTableComponent } from './ce-character-table.component';
 import { CeRelationshipGraphPreviewComponent } from './ce-relationship-graph-preview.component';
 import { CePropertyInspectorComponent } from './ce-property-inspector.component';
+import { CeCharacterEditorComponent } from './ce-character-editor.component';
 
 @Component({
   selector: 'ce-character-explorer',
@@ -41,6 +42,7 @@ import { CePropertyInspectorComponent } from './ce-property-inspector.component'
     CeCharacterTableComponent,
     CeRelationshipGraphPreviewComponent,
     CePropertyInspectorComponent,
+    CeCharacterEditorComponent,
   ],
   template: `
     @if (loading()) {
@@ -78,33 +80,42 @@ import { CePropertyInspectorComponent } from './ce-property-inspector.component'
 
           <!-- RIGHT: Inspector & graph preview -->
           <mat-drawer mode="side" position="end" opened class="explorer-right-drawer">
-            <div class="right-panel">
-              <!-- Graph preview (top of right panel) -->
-              <ce-relationship-graph-preview
-                [nodes]="graphNodes()"
-                [edges]="graphEdges()"
-                [loading]="graphLoading()"
-                [highlightNodeId]="selectedEntity()?.id ?? null"
-                (nodeClicked)="onGraphNodeClicked($event)"
-                (openFull)="onGraphRequested()"
-              />
+            @if (createMode()) {
+              <!-- CREATE MODE: full-drawer character editor -->
+              <ce-character-editor
+                [embedded]="true"
+                (created)="onEntityCreated($event)"
+                (cancelled)="onCreateCancelled()">
+              </ce-character-editor>
+            } @else {
+              <div class="right-panel">
+                <!-- Graph preview (top of right panel) -->
+                <ce-relationship-graph-preview
+                  [nodes]="graphNodes()"
+                  [edges]="graphEdges()"
+                  [loading]="graphLoading()"
+                  [highlightNodeId]="selectedEntity()?.id ?? null"
+                  (nodeClicked)="onGraphNodeClicked($event)"
+                  (openFull)="onGraphRequested()"
+                />
 
-              <!-- Property inspector (fills remaining space) -->
-              <ce-property-inspector
-                class="inspector-flex"
-                [entity]="selectedEntity()"
-                [editMode]="editMode()"
-                [totalEntities]="entities().length"
-                [totalRelationships]="relationships().length"
-                [traitPackCount]="traitPacks().length"
-                [schemaCount]="schemas().length"
-                (editRequested)="editMode.set(true)"
-                (closeEdit)="editMode.set(false)"
-                (createCharacter)="onCreateRequested()"
-                (viewRelationships)="onViewRelationships()"
-                (openGraph)="onGraphRequested()"
-              />
-            </div>
+                <!-- Property inspector (fills remaining space) -->
+                <ce-property-inspector
+                  class="inspector-flex"
+                  [entity]="selectedEntity()"
+                  [editMode]="editMode()"
+                  [totalEntities]="entities().length"
+                  [totalRelationships]="relationships().length"
+                  [traitPackCount]="traitPacks().length"
+                  [schemaCount]="schemas().length"
+                  (editRequested)="editMode.set(true)"
+                  (closeEdit)="editMode.set(false)"
+                  (createCharacter)="onCreateRequested()"
+                  (viewRelationships)="onViewRelationships()"
+                  (openGraph)="onGraphRequested()"
+                />
+              </div>
+            }
           </mat-drawer>
 
         </mat-drawer-container>
@@ -199,6 +210,7 @@ export class CeCharacterExplorerComponent implements OnInit {
   // ── State signals ────────────────────────────────────────────
   loading = signal(true);
   graphLoading = signal(false);
+  createMode = signal(false);
 
   entities = signal<CeEntity[]>([]);
   schemas = signal<CeSchema[]>([]);
@@ -323,15 +335,34 @@ export class CeCharacterExplorerComponent implements OnInit {
   onCreateRequested(): void {
     this.selectedEntity.set(null);
     this.editMode.set(false);
-    this.router.navigate(['/ce/characters']);
+    this.createMode.set(true);
+  }
+
+  onCreateCancelled(): void {
+    this.createMode.set(false);
+  }
+
+  onEntityCreated(entityId: string): void {
+    this.createMode.set(false);
+    // Reload entities then select and open edit for the new one
+    this.entitySvc.listEntities().subscribe((entities) => {
+      this.entities.set(entities);
+      this.schemas.set(this.deriveSchemasFromEntities(entities));
+      const created = entities.find((e) => e.id === entityId);
+      if (created) {
+        this.selectedEntity.set(created);
+        this.editMode.set(true);
+      }
+      this.cdr.markForCheck();
+    });
   }
 
   onGraphRequested(): void {
-    this.router.navigate(['/ce/relationships']);
+    this.router.navigate(['/ce/graph']);
   }
 
   onViewRelationships(): void {
-    this.router.navigate(['/ce/relationships']);
+    this.router.navigate(['/ce/graph']);
   }
 
   onGraphNodeClicked(node: CeGraphNode): void {

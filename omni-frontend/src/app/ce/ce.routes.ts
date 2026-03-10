@@ -29,4 +29,11 @@ export const CE_ROUTES: Routes = [
         (m) => m.CeRelationshipGraphComponent
       ),
   },
+  {
+    path: 'graph',
+    loadComponent: () =>
+      import('./graph/ce-graph-workspace.component').then(
+        (m) => m.CeGraphWorkspaceComponent
+      ),
+  },
 ];

@@ -184,7 +184,7 @@ class CeRelationshipUpdate(BaseModel):
 class CeRelationshipOut(CeRelationshipBase):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
     metadata: Dict[str, Any] = Field(default_factory=dict, alias="metadata_")
-    id: str
+    id: UUID
     created_at: datetime
 
 

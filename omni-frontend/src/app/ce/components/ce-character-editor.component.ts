@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input, OnInit, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnInit, Output, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -174,6 +174,11 @@ import { CeTraitEditorComponent } from './ce-trait-editor.component';
 })
 export class CeCharacterEditorComponent implements OnInit {
   @Input() entityId = '';
+  /** When true, the component is hosted inside a drawer; emits events instead of navigating. */
+  @Input() embedded = false;
+
+  @Output() created = new EventEmitter<string>();
+  @Output() cancelled = new EventEmitter<void>();
 
   entity = signal<CeEntity | null>(null);
   resolvedTraits = signal<CeResolvedTrait[]>([]);
@@ -221,7 +226,11 @@ export class CeCharacterEditorComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/ce']);
+    if (this.embedded) {
+      this.cancelled.emit();
+    } else {
+      this.router.navigate(['/ce']);
+    }
   }
 
   reload(): void {
@@ -336,14 +345,21 @@ export class CeCharacterEditorComponent implements OnInit {
             this.traitPackIds.set([]);
             this.traitValues.set({});
             this.resolvedTraits.set([]);
-            // Navigate to edit page for the new entity
-            this.router.navigate(['/ce/characters', created.id]);
+            if (this.embedded) {
+              this.created.emit(created.id);
+            } else {
+              this.router.navigate(['/ce/characters', created.id]);
+            }
           },
           error: (err) => {
             this.saving.set(false);
             const msg = err?.error?.detail || err?.message || 'Failed to save traits';
             this.snack.open(`Created but traits failed: ${msg}`, 'Dismiss', { duration: 5000 });
-            this.router.navigate(['/ce/characters', created.id]);
+            if (this.embedded) {
+              this.created.emit(created.id);
+            } else {
+              this.router.navigate(['/ce/characters', created.id]);
+            }
           },
         });
       },
