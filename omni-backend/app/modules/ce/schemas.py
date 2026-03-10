@@ -224,6 +224,7 @@ class CeGraphNode(BaseModel):
 
 
 class CeGraphEdge(BaseModel):
+    id: str
     source: str
     target: str
     type: str

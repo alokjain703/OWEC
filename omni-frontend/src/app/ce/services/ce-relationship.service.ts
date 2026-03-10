@@ -59,8 +59,9 @@ export class CeRelationshipService {
     return this.http.get<{ nodes: CeGraphNode[]; edges: { source: string; target: string; type: string }[] }>(`${this.base}/graph`);
   }
 
-  mapGraphEdges(edges: { source: string; target: string; type: string }[]): CeGraphEdge[] {
+  mapGraphEdges(edges: { id?: string; source: string; target: string; type: string }[]): CeGraphEdge[] {
     return edges.map((edge) => ({
+      id: edge.id ?? `${edge.source}-${edge.target}-${edge.type}`,
       source: edge.source,
       target: edge.target,
       relationshipType: edge.type,

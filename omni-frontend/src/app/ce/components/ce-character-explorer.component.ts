@@ -283,6 +283,7 @@ export class CeCharacterExplorerComponent implements OnInit {
         this.graphNodes.set(nodes);
         // Adapt edge format from service response
         const adaptedEdges: CeGraphEdge[] = edges.map((e: any) => ({
+          id: e.id || `${e.source}-${e.target}-${e.type || e.relationshipType}`,
           source: e.source,
           target: e.target,
           relationshipType: e.type || e.relationshipType || '',

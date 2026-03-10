@@ -57,16 +57,16 @@ import { CeRelationshipService } from '../services/ce-relationship.service';
 
       <mat-divider />
 
-      <!-- Source → Target display -->
+      <!-- Source → Target display (swaps visually when flipped) -->
       <div class="endpoints">
         <div class="endpoint source">
           <mat-icon class="ep-icon">person</mat-icon>
-          <span class="ep-name">{{ sourceName() }}</span>
+          <span class="ep-name">{{ flipped() ? targetName() : sourceName() }}</span>
         </div>
         <mat-icon class="arrow">arrow_forward</mat-icon>
         <div class="endpoint target">
           <mat-icon class="ep-icon">person</mat-icon>
-          <span class="ep-name">{{ targetName() }}</span>
+          <span class="ep-name">{{ flipped() ? sourceName() : targetName() }}</span>
         </div>
       </div>
 
@@ -74,7 +74,7 @@ import { CeRelationshipService } from '../services/ce-relationship.service';
 
       <!-- Editable fields -->
       <div class="inspector-body">
-        @if (!editingType()) {
+        @if (!isEditing()) {
           <div class="prop-row">
             <span class="prop-label">Type</span>
             <mat-chip class="type-chip">{{ edgeType() }}</mat-chip>
@@ -91,21 +91,35 @@ import { CeRelationshipService } from '../services/ce-relationship.service';
             <mat-label>Relationship Type</mat-label>
             <mat-select [(ngModel)]="editedType">
               @for (rt of relTypes; track rt.id) {
-                <mat-option [value]="rt.name">{{ rt.name }}</mat-option>
+                <mat-option [value]="rt.id">{{ rt.name }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
+
+          @if (flipped()) {
+            <p class="flip-hint">
+              <mat-icon class="hint-icon">swap_horiz</mat-icon>
+              Direction will be reversed on save
+            </p>
+          }
+        }
+
+        @if (saveError()) {
+          <p class="error-msg">
+            <mat-icon class="err-icon">error_outline</mat-icon>
+            {{ saveError() }}
+          </p>
         }
       </div>
 
       <!-- Actions -->
       <mat-divider />
       <div class="inspector-actions">
-        @if (!editingType()) {
+        @if (!isEditing()) {
           <button mat-stroked-button (click)="startEdit()">
             <mat-icon>edit</mat-icon> Edit
           </button>
-          <button mat-stroked-button (click)="flipRequested.emit(relationship()!)">
+          <button mat-stroked-button (click)="startFlip()" matTooltip="Flip direction">
             <mat-icon>swap_horiz</mat-icon> Flip
           </button>
           <button mat-icon-button color="warn" matTooltip="Delete relationship"
@@ -194,6 +208,19 @@ import { CeRelationshipService } from '../services/ce-relationship.service';
 
     .full-width { width: 100%; }
 
+    .flip-hint {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--mat-secondary-text, #888);
+      margin: 0 0 4px;
+    }
+    .hint-icon { font-size: 16px; width: 16px; height: 16px; }
+
+    .error-msg {
+      display: flex; align-items: center; gap: 6px;
+      color: var(--mat-warn, #f44336); font-size: 13px; margin: 4px 0 0;
+    }
+    .err-icon { font-size: 16px; width: 16px; height: 16px; }
+
     .inspector-actions {
       display: flex; gap: 6px; flex-wrap: wrap;
       padding: 8px 12px;
@@ -208,7 +235,6 @@ export class CeEdgeInspectorComponent implements OnChanges {
 
   @Output() edited = new EventEmitter<CeRelationship>();
   @Output() deleteRequested = new EventEmitter<CeRelationship>();
-  @Output() flipRequested = new EventEmitter<CeRelationship>();
 
   private _relationship = signal<CeRelationship | null>(null);
   private _sourceName = signal('—');
@@ -219,15 +245,25 @@ export class CeEdgeInspectorComponent implements OnChanges {
   targetName = this._targetName.asReadonly();
   edgeType = signal('—');
   editingType = signal(false);
+  flipped = signal(false);
   saving = signal(false);
+  saveError = signal('');
   editedType = '';
+
+  /** True when the form is in edit mode (type change or flip pending) */
+  isEditing = this.editingType;
 
   constructor(private relSvc: CeRelationshipService) {}
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['edge'] || changes['entities'] || changes['relationships']) {
       const edgeId = this.edge?.id as string;
-      const rel = this.relationships.find((r) => r.id === edgeId) ?? null;
+      // Primary lookup: match by relationship UUID stored in edge.id
+      // Fallback: use edge.data if buildGraph populated it
+      const rel =
+        this.relationships.find((r) => r.id === edgeId) ??
+        (this.edge?.data as CeRelationship | undefined) ??
+        null;
       this._relationship.set(rel);
 
       const sourceId = typeof this.edge?.source === 'string'
@@ -239,30 +275,58 @@ export class CeEdgeInspectorComponent implements OnChanges {
       this._targetName.set(this.entities.find((e) => e.id === targetId)?.name || targetId || '—');
       this.edgeType.set(this.edge?.type || rel?.type || '—');
       this.editingType.set(false);
+      this.flipped.set(false);
+      this.saveError.set('');
     }
   }
 
   startEdit(): void {
     this.editedType = this.edgeType();
     this.editingType.set(true);
+    this.saveError.set('');
+  }
+
+  startFlip(): void {
+    this.flipped.set(!this.flipped());
+    if (!this.editedType) this.editedType = this.edgeType();
+    this.editingType.set(true);
+    this.saveError.set('');
   }
 
   cancelEdit(): void {
     this.editingType.set(false);
+    this.flipped.set(false);
+    this.editedType = '';
+    this.saveError.set('');
   }
 
   saveEdit(): void {
     const rel = this._relationship();
     if (!rel) return;
     this.saving.set(true);
-    this.relSvc.updateRelationship(rel.id, { type: this.editedType }).subscribe({
+    this.saveError.set('');
+
+    const update: Partial<CeRelationship> = {
+      type: this.editedType || rel.type,
+    };
+    if (this.flipped()) {
+      update.source = rel.target;
+      update.target = rel.source;
+    }
+
+    this.relSvc.updateRelationship(rel.id, update).subscribe({
       next: (updated) => {
         this.saving.set(false);
         this.editingType.set(false);
+        this.flipped.set(false);
         this.edgeType.set(updated.type);
         this.edited.emit(updated);
       },
-      error: () => this.saving.set(false),
+      error: (err) => {
+        this.saving.set(false);
+        this.saveError.set(err?.error?.detail || err?.message || 'Failed to save');
+      },
     });
   }
 }
+

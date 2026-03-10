@@ -72,7 +72,7 @@ export class CeRelationshipGraphComponent implements OnInit, OnChanges {
     );
     this.graphEdges.set(
       edges.map((edge) => ({
-        id: `${edge.source}-${edge.target}-${edge.relationshipType}`,
+        id: edge.id ?? `${edge.source}-${edge.target}-${edge.relationshipType}`,
         source: edge.source,
         target: edge.target,
         type: edge.relationshipType,

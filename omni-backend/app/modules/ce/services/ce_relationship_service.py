@@ -105,9 +105,11 @@ class CeRelationshipService:
             ],
             "edges": [
                 {
+                    "id": str(rel.id),
                     "source": rel.source_entity_id,
                     "target": rel.target_entity_id,
-                    "type": rel_type.name,
+                    "type": rel.type_id,
+                    "type_name": rel_type.name,
                 }
                 for rel, rel_type in edges_rows
             ],

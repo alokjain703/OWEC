@@ -20,6 +20,7 @@ export interface CeGraphNode {
 }
 
 export interface CeGraphEdge {
+  id: string;
   source: string;
   target: string;
   relationshipType: string;

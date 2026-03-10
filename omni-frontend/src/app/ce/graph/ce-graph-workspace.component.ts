@@ -138,8 +138,7 @@ import { CeCreateRelationshipPanelComponent } from './ce-create-relationship-pan
             [relTypes]="relTypes()"
             [relationships]="relationships()"
             (edited)="onRelationshipEdited($event)"
-            (deleteRequested)="deleteEdge($event)"
-            (flipRequested)="flipEdge($event)">
+            (deleteRequested)="deleteEdge($event)">
           </ce-edge-inspector>
         } @else {
           <div class="inspector-empty">
@@ -277,6 +276,7 @@ export class CeGraphWorkspaceComponent implements OnInit {
   // CeGraphEdge form fed to the relationship-graph component (derived)
   rawCeEdges = computed<CeGraphEdge[]>(() =>
     this.rawEdges().map((e) => ({
+      id: e.id,
       source: typeof e.source === 'string' ? e.source : (e.source as OmniGraphNode).id,
       target: typeof e.target === 'string' ? e.target : (e.target as OmniGraphNode).id,
       relationshipType: e.type,
@@ -374,7 +374,7 @@ export class CeGraphWorkspaceComponent implements OnInit {
         this.entities.set(entities);
         this.relationships.set(relationships);
         this.relTypes.set(relTypes);
-        this.buildGraph(graph.nodes as CeGraphNode[], graph.edges);
+        this.buildGraph(graph.nodes as CeGraphNode[], graph.edges, relationships);
         this.loading.set(false);
       },
       error: () => {
@@ -387,6 +387,7 @@ export class CeGraphWorkspaceComponent implements OnInit {
   private buildGraph(
     nodes: CeGraphNode[],
     edges: { source: string; target: string; type: string }[],
+    relationships: CeRelationship[] = [],
   ): void {
     this.ngZone.runOutsideAngular(() => {
       const omniNodes: OmniGraphNode[] = nodes.map((n) => ({
@@ -395,17 +396,21 @@ export class CeGraphWorkspaceComponent implements OnInit {
         type: n.type,
         data: n,
       }));
-      const omniEdges: OmniGraphEdge[] = edges.map((e) => ({
-        id: `${e.source}-${e.target}-${e.type}`,
-        source: e.source,
-        target: e.target,
-        type: e.type,
-      }));
-      const ceEdges: CeGraphEdge[] = edges.map((e) => ({
-        source: e.source,
-        target: e.target,
-        relationshipType: e.type,
-      }));
+      const omniEdges: OmniGraphEdge[] = edges.map((e) => {
+        const edgeWithId = e as { id?: string; source: string; target: string; type: string };
+        const rel =
+          (edgeWithId.id ? relationships.find((r) => r.id === edgeWithId.id) : undefined) ??
+          relationships.find(
+            (r) => r.source === e.source && r.target === e.target && r.type === e.type
+          );
+        return {
+          id: rel?.id ?? edgeWithId.id ?? `${e.source}-${e.target}-${e.type}`,
+          source: e.source,
+          target: e.target,
+          type: e.type,
+          data: rel ?? undefined,
+        };
+      });
       this.ngZone.run(() => {
         this.rawNodes.set(omniNodes);
         this.rawEdges.set(omniEdges);
