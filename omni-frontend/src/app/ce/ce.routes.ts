@@ -36,11 +36,4 @@ export const CE_ROUTES: Routes = [
         (m) => m.CeGraphWorkspaceComponent
       ),
   },
-  {
-    path: 'rel-types',
-    loadComponent: () =>
-      import('./components/ce-relationship-type-editor.component').then(
-        (m) => m.CeRelationshipTypeEditorComponent
-      ),
-  },
 ];
