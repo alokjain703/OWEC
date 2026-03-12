@@ -31,11 +31,11 @@ export class TraitDefService {
     return this.http.get<TraitDefApi>(`${this.base}/${id}`).pipe(map(this.fromApi));
   }
 
-  create(data: Omit<TraitDef, 'id'>): Observable<TraitDef> {
+  create(data: TraitDef): Observable<TraitDef> {
     return this.http.post<TraitDefApi>(this.base, this.toApi(data)).pipe(map(this.fromApi));
   }
 
-  update(id: string, data: Partial<Omit<TraitDef, 'id'>>): Observable<TraitDef> {
+  update(id: string, data: Partial<TraitDef>): Observable<TraitDef> {
     return this.http.put<TraitDefApi>(`${this.base}/${id}`, this.toApi(data)).pipe(map(this.fromApi));
   }
 
@@ -55,8 +55,9 @@ export class TraitDefService {
     description:  raw.description,
   });
 
-  private toApi(data: Partial<Omit<TraitDef, 'id'>>): Partial<TraitDefApi> {
+  private toApi(data: Partial<TraitDef>): Partial<TraitDefApi> {
     const out: Partial<TraitDefApi> = {};
+    if (data.id           !== undefined) out.id            = data.id;
     if (data.schemaId     !== undefined) out.schema_id    = data.schemaId;
     if (data.groupId      !== undefined) out.group_id     = data.groupId;
     if (data.name         !== undefined) out.name         = data.name;

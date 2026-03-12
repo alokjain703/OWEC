@@ -28,11 +28,11 @@ export class TraitGroupService {
     return this.http.get<TraitGroupApi>(`${this.base}/${id}`).pipe(map(this.fromApi));
   }
 
-  create(data: Omit<TraitGroup, 'id'>): Observable<TraitGroup> {
+  create(data: TraitGroup): Observable<TraitGroup> {
     return this.http.post<TraitGroupApi>(this.base, this.toApi(data)).pipe(map(this.fromApi));
   }
 
-  update(id: string, data: Partial<Omit<TraitGroup, 'id'>>): Observable<TraitGroup> {
+  update(id: string, data: Partial<TraitGroup>): Observable<TraitGroup> {
     return this.http.put<TraitGroupApi>(`${this.base}/${id}`, this.toApi(data)).pipe(map(this.fromApi));
   }
 
@@ -49,8 +49,9 @@ export class TraitGroupService {
     description:  raw.description,
   });
 
-  private toApi(data: Partial<Omit<TraitGroup, 'id'>>): Partial<TraitGroupApi> {
+  private toApi(data: Partial<TraitGroup>): Partial<TraitGroupApi> {
     const out: Partial<TraitGroupApi> = {};
+    if (data.id           !== undefined) out.id            = data.id;
     if (data.schemaId     !== undefined) out.schema_id     = data.schemaId;
     if (data.name         !== undefined) out.name          = data.name;
     if (data.label        !== undefined) out.label         = data.label;

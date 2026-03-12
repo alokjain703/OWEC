@@ -98,6 +98,12 @@ import { TraitGroup } from '../models/trait-group.model';
           <textarea matInput formControlName="description" rows="2"></textarea>
         </mat-form-field>
 
+        <mat-form-field appearance="outline" class="field-full">
+          <mat-label>ID</mat-label>
+          <input matInput [value]="item ? item.id : derivedId" readonly>
+          <mat-hint>Auto-derived from schema, group and name, e.g. item.identity.strength</mat-hint>
+        </mat-form-field>
+
         @if (errorMsg) { <p class="error-msg">{{ errorMsg }}</p> }
 
         <div class="editor-actions">
@@ -119,7 +125,7 @@ export class TraitDefEditorComponent implements OnChanges {
   @Input() saving                 = false;
   @Input() errorMsg               = '';
 
-  @Output() save   = new EventEmitter<Omit<TraitDef, 'id'>>();
+  @Output() save   = new EventEmitter<TraitDef>();
   @Output() cancel = new EventEmitter<void>();
 
   private fb = inject(FormBuilder);
@@ -148,10 +154,21 @@ export class TraitDefEditorComponent implements OnChanges {
     }
   }
 
+  get derivedId(): string {
+    const schema = this.schemas.find(s => s.id === this.form.get('schemaId')?.value);
+    const group  = this.traitGroups.find(g => g.id === this.form.get('groupId')?.value);
+    const schemaSlug = (schema?.name ?? '').toLowerCase().replace(/\s+/g, '-');
+    const groupSlug  = (group?.name  ?? '').toLowerCase().replace(/\s+/g, '-');
+    const nameSlug   = (this.form.get('name')?.value ?? '').toLowerCase().replace(/\s+/g, '-');
+    if (!schemaSlug || !nameSlug) return '';
+    return groupSlug ? `${schemaSlug}.${groupSlug}.${nameSlug}` : `${schemaSlug}.${nameSlug}`;
+  }
+
   submit(): void {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     const v = this.form.getRawValue();
     this.save.emit({
+      id:           this.item ? this.item.id : this.derivedId,
       schemaId:     v.schemaId     ?? '',
       groupId:      v.groupId      ?? '',
       name:         v.name         ?? '',

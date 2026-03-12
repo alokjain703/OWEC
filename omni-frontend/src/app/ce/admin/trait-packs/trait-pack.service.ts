@@ -27,11 +27,11 @@ export class TraitPackService {
     return this.http.get<TraitPackApi>(`${this.base}/${id}`).pipe(map(this.fromApi));
   }
 
-  create(data: Omit<TraitPack, 'id'>): Observable<TraitPack> {
+  create(data: TraitPack): Observable<TraitPack> {
     return this.http.post<TraitPackApi>(this.base, this.toApi(data)).pipe(map(this.fromApi));
   }
 
-  update(id: string, data: Partial<Omit<TraitPack, 'id'>>): Observable<TraitPack> {
+  update(id: string, data: Partial<TraitPack>): Observable<TraitPack> {
     return this.http.put<TraitPackApi>(`${this.base}/${id}`, this.toApi(data)).pipe(map(this.fromApi));
   }
 
@@ -47,8 +47,9 @@ export class TraitPackService {
     traitDefIds: raw.trait_def_ids ?? [],
   });
 
-  private toApi(data: Partial<Omit<TraitPack, 'id'>>): Partial<TraitPackApi> {
+  private toApi(data: Partial<TraitPack>): Partial<TraitPackApi> {
     const out: Partial<TraitPackApi> = {};
+    if (data.id          !== undefined) out.id            = data.id;
     if (data.schemaId    !== undefined) out.schema_id     = data.schemaId;
     if (data.name        !== undefined) out.name          = data.name;
     if (data.description !== undefined) out.description   = data.description;

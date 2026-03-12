@@ -73,6 +73,12 @@ import { Schema } from '../models/schema.model';
           <textarea matInput formControlName="description" rows="2"></textarea>
         </mat-form-field>
 
+        <mat-form-field appearance="outline" class="field-full">
+          <mat-label>ID</mat-label>
+          <input matInput [value]="item ? item.id : derivedId" readonly>
+          <mat-hint>Auto-derived from schema and name, e.g. item.identity</mat-hint>
+        </mat-form-field>
+
         @if (errorMsg) { <p class="error-msg">{{ errorMsg }}</p> }
 
         <div class="editor-actions">
@@ -92,7 +98,7 @@ export class TraitGroupEditorComponent implements OnChanges {
   @Input() saving                  = false;
   @Input() errorMsg                = '';
 
-  @Output() save   = new EventEmitter<Omit<TraitGroup, 'id'>>();
+  @Output() save   = new EventEmitter<TraitGroup>();
   @Output() cancel = new EventEmitter<void>();
 
   private fb = inject(FormBuilder);
@@ -113,10 +119,18 @@ export class TraitGroupEditorComponent implements OnChanges {
     }
   }
 
+  get derivedId(): string {
+    const schema = this.schemas.find(s => s.id === this.form.get('schemaId')?.value);
+    const schemaSlug = (schema?.name ?? '').toLowerCase().replace(/\s+/g, '-');
+    const nameSlug   = (this.form.get('name')?.value ?? '').toLowerCase().replace(/\s+/g, '-');
+    return schemaSlug && nameSlug ? `${schemaSlug}.${nameSlug}` : '';
+  }
+
   submit(): void {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     const v = this.form.getRawValue();
     this.save.emit({
+      id:           this.item ? this.item.id : this.derivedId,
       schemaId:     v.schemaId     ?? '',
       name:         v.name         ?? '',
       label:        v.label        ?? '',

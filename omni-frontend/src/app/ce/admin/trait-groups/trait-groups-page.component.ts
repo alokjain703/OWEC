@@ -70,7 +70,7 @@ export class TraitGroupsPageComponent {
   onNew():                  void { this.selected.set(null); this.error.set(''); }
   onCancel():               void { this.selected.set(undefined); }
 
-  onSave(payload: Omit<TraitGroup, 'id'>): void {
+  onSave(payload: TraitGroup): void {
     this.saving.set(true);
     this.error.set('');
     const isNew = !this.selected();

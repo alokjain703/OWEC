@@ -73,7 +73,7 @@ export class TraitDefsPageComponent {
   onNew():                             void { this.selected.set(null); this.error.set(''); }
   onCancel():                          void { this.selected.set(undefined); }
 
-  onSave(payload: Omit<TraitDef, 'id'>): void {
+  onSave(payload: TraitDef): void {
     this.saving.set(true);
     this.error.set('');
     const isNew = !this.selected();
