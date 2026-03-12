@@ -12,3 +12,4 @@ from app.modules.ce.models.ce_trait import CeTraitDef, CeTraitPack, CeTraitPackT
 from app.modules.ce.models.ce_entity import CeEntity, CeEntityTrait  # noqa: F401
 from app.modules.ce.models.ce_relationship import CeRelationshipType, CeRelationship  # noqa: F401
 from app.modules.ce.models.ce_ai_trait import CeAiTrait  # noqa: F401
+from app.modules.ce.models.ce_trait_group import CeTraitGroup, CeTraitOption  # noqa: F401

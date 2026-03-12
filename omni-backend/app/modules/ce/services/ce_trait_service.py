@@ -31,6 +31,10 @@ class CeTraitService:
             type=data.type,
             group_name=data.group_name,
             source=data.source,
+            group_id=data.group_id,
+            is_required=data.is_required,
+            display_order=data.display_order,
+            description=data.description,
         )
         return await self.repo.create_def(trait_def)
 
@@ -44,6 +48,14 @@ class CeTraitService:
             trait_def.group_name = data.group_name
         if data.source is not None:
             trait_def.source = data.source
+        if data.group_id is not None:
+            trait_def.group_id = data.group_id
+        if data.is_required is not None:
+            trait_def.is_required = data.is_required
+        if data.display_order is not None:
+            trait_def.display_order = data.display_order
+        if data.description is not None:
+            trait_def.description = data.description
         return trait_def
 
     async def delete_def(self, trait_def_id: str) -> None:

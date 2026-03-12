@@ -5,13 +5,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.modules.ce.repositories.ce_entity_repository import CeEntityRepository
 from app.modules.ce.schemas import (
+    CeEditorResponse,
     CeEntityCreate,
     CeEntityOut,
     CeEntityUpdate,
     CeEntityTraitOut,
     CeEntityTraitsPut,
+    CeEntityWithTraitPackCreate,
     CeResolvedTrait,
 )
+from app.modules.ce.services.ce_editor_service import CeEditorService
 from app.modules.ce.services.ce_entity_service import CeEntityService
 
 router = APIRouter(prefix="/entities", tags=["CE Entities"])
@@ -81,3 +84,28 @@ async def get_resolved_traits(entity_id: str, svc: CeEntityService = Depends(get
         return await svc.resolve_traits(entity_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get("/{entity_id}/editor", response_model=CeEditorResponse)
+async def get_entity_editor(
+    entity_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the full editor payload for the Angular Dynamic Form Engine."""
+    try:
+        svc = CeEditorService(db)
+        return await svc.build_editor(entity_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.post("/create", response_model=CeEntityOut, status_code=status.HTTP_201_CREATED)
+async def create_entity_with_pack(
+    payload: CeEntityWithTraitPackCreate,
+    svc: CeEntityService = Depends(get_service),
+):
+    """Simplified entity creation – resolves schema name and applies a trait pack."""
+    try:
+        return await svc.create_with_pack(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))

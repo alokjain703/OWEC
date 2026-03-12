@@ -58,6 +58,19 @@ class CeTraitDefBase(BaseModel):
     type: str
     group_name: str
     source: str
+    # Dynamic-form-engine fields
+    group_id: Optional[str] = None
+    is_required: bool = False
+    display_order: int = 0
+    description: Optional[str] = None
+
+    @property
+    def name(self) -> str:
+        return self.trait_key
+
+    @property
+    def value_type(self) -> str:
+        return self.type
 
 
 class CeTraitDefCreate(CeTraitDefBase):
@@ -69,11 +82,66 @@ class CeTraitDefUpdate(BaseModel):
     type: Optional[str] = None
     group_name: Optional[str] = None
     source: Optional[str] = None
+    group_id: Optional[str] = None
+    is_required: Optional[bool] = None
+    display_order: Optional[int] = None
+    description: Optional[str] = None
 
 
 class CeTraitDefOut(CeTraitDefBase):
     model_config = ConfigDict(from_attributes=True)
     created_at: datetime
+
+
+# ── Trait Groups ──────────────────────────────────────────────────────────────
+
+class CeTraitGroupBase(BaseModel):
+    id: str
+    schema_id: str
+    name: str
+    label: Optional[str] = None
+    display_order: int = 0
+    description: Optional[str] = None
+
+
+class CeTraitGroupCreate(CeTraitGroupBase):
+    pass
+
+
+class CeTraitGroupUpdate(BaseModel):
+    name: Optional[str] = None
+    label: Optional[str] = None
+    display_order: Optional[int] = None
+    description: Optional[str] = None
+
+
+class CeTraitGroupOut(CeTraitGroupBase):
+    model_config = ConfigDict(from_attributes=True)
+    created_at: datetime
+
+
+# ── Trait Options ─────────────────────────────────────────────────────────────
+
+class CeTraitOptionBase(BaseModel):
+    id: str
+    trait_def_id: str
+    value: str
+    label: str
+    display_order: int = 0
+
+
+class CeTraitOptionCreate(CeTraitOptionBase):
+    pass
+
+
+class CeTraitOptionUpdate(BaseModel):
+    value: Optional[str] = None
+    label: Optional[str] = None
+    display_order: Optional[int] = None
+
+
+class CeTraitOptionOut(CeTraitOptionBase):
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CeTraitPackBase(BaseModel):
@@ -237,3 +305,49 @@ class CeGraphOut(BaseModel):
 
 class CeAiRequest(BaseModel):
     entityId: str
+
+
+# ── Editor Aggregation Response ───────────────────────────────────────────────
+
+class CeEditorTraitOut(BaseModel):
+    """A single field in the dynamic editor, with its current value."""
+    id: str
+    name: str           # trait_key
+    label: str
+    type: str           # value_type
+    group_id: Optional[str] = None
+    is_required: bool = False
+    display_order: int = 0
+    description: Optional[str] = None
+    options: list["CeTraitOptionOut"] = Field(default_factory=list)
+    value: Optional[Any] = None
+
+
+class CeEditorGroupOut(BaseModel):
+    """A group of traits for the dynamic editor."""
+    id: Optional[str] = None
+    name: str
+    display_order: int = 0
+    traits: list[CeEditorTraitOut] = Field(default_factory=list)
+
+
+class CeEditorEntityInfo(BaseModel):
+    id: str
+    name: str
+    schema: str
+
+
+class CeEditorResponse(BaseModel):
+    """Full payload for the Angular Dynamic Form Engine."""
+    entity: CeEditorEntityInfo
+    groups: list[CeEditorGroupOut]
+
+
+# ── Entity creation with optional trait-pack pre-load ────────────────────────
+
+class CeEntityWithTraitPackCreate(BaseModel):
+    """Simplified entity creation accepted by POST /api/ce/entities/create."""
+    name: str
+    schema: str                      # schema id or name
+    trait_pack: Optional[str] = None  # trait pack id (optional)
+    description: Optional[str] = None

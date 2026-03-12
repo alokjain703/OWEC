@@ -1,12 +1,21 @@
 """CE Entity service."""
 from __future__ import annotations
 
+import uuid
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.ce.models.ce_entity import CeEntity, CeEntityTrait
+from app.modules.ce.models.ce_schema import CeSchema
+from app.modules.ce.models.ce_trait import CeTraitDef, CeTraitPackTrait
 from app.modules.ce.repositories.ce_entity_repository import CeEntityRepository
-from app.modules.ce.schemas import CeEntityCreate, CeEntityUpdate, CeEntityTraitsPut
+from app.modules.ce.schemas import (
+    CeEntityCreate,
+    CeEntityUpdate,
+    CeEntityTraitsPut,
+    CeEntityWithTraitPackCreate,
+)
 from app.modules.ce.services.ce_trait_resolver_service import CeTraitResolverService
 
 
@@ -68,3 +77,40 @@ class CeEntityService:
 
     async def resolve_traits(self, entity_id: str) -> list[dict]:
         return await self.trait_resolver.resolve_traits(entity_id)
+
+    async def create_with_pack(self, data: CeEntityWithTraitPackCreate) -> CeEntity:
+        """Simplified entity creation: resolves schema by id/name and applies a trait pack."""
+        # Resolve schema
+        schema_result = await self.db.execute(
+            select(CeSchema).where(
+                (CeSchema.id == data.schema) | (CeSchema.name == data.schema)
+            )
+        )
+        schema = schema_result.scalars().first()
+        if not schema:
+            raise ValueError(f"Schema '{data.schema}' not found")
+
+        entity = CeEntity(
+            id=str(uuid.uuid4()),
+            schema_id=schema.id,
+            template_level="player",
+            name=data.name,
+            metadata_={"description": data.description} if data.description else {},
+        )
+        entity = await self.repo.create(entity)
+
+        # Apply trait pack defaults (empty values)
+        if data.trait_pack:
+            pack_traits_result = await self.db.execute(
+                select(CeTraitPackTrait).where(CeTraitPackTrait.pack_id == data.trait_pack)
+            )
+            for pt in pack_traits_result.scalars().all():
+                trait = CeEntityTrait(
+                    entity_id=entity.id,
+                    trait_def_id=pt.trait_def_id,
+                    value={},
+                )
+                self.db.add(trait)
+            await self.db.flush()
+
+        return entity

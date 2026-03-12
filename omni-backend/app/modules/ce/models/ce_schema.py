@@ -22,3 +22,6 @@ class CeSchema(Base):
     trait_packs: Mapped[list["CeTraitPack"]] = relationship(back_populates="schema", cascade="all, delete-orphan")  # type: ignore[name-defined]
     entities: Mapped[list["CeEntity"]] = relationship(back_populates="schema", cascade="all, delete-orphan")  # type: ignore[name-defined]
     relationship_types: Mapped[list["CeRelationshipType"]] = relationship(back_populates="schema", cascade="all, delete-orphan")  # type: ignore[name-defined]
+    trait_groups_v2: Mapped[list["CeTraitGroup"]] = relationship(  # type: ignore[name-defined]
+        "CeTraitGroup", back_populates="schema", cascade="all, delete-orphan"
+    )
