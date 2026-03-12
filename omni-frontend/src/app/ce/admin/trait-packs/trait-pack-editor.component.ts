@@ -80,7 +80,7 @@ import { TraitDef } from '../models/trait-def.model';
       </form>
     </div>
   `,
-  styles: [`@use 'panel-common' as *;`],
+  styleUrls: ['../_panel-common.scss'],
 })
 export class TraitPackEditorComponent implements OnChanges {
   @Input() item: TraitPack | null = null;

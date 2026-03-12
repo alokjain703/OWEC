@@ -3,9 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
-import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatChipsModule } from '@angular/material/chips';
 
 import { AuthStateService } from '../../../../core/services/auth-state.service';
 import { CE_ADMIN_PERMISSIONS, hasAdminRole, CeAdminRole } from '../../guards/ce-admin.guard';
@@ -39,32 +37,21 @@ const NAV_ITEMS: NavItem[] = [
     RouterModule,
     MatListModule,
     MatIconModule,
-    MatDividerModule,
     MatTooltipModule,
-    MatChipsModule,
   ],
   template: `
-    <!-- Header -->
-    <div class="nav-header">
-      <mat-icon class="nav-header-icon">settings</mat-icon>
-      <div class="nav-header-text">
-        <span class="nav-title">⚙ Character Engine</span>
-        <span class="nav-subtitle">Administration</span>
-      </div>
+    <!-- Section header -->
+    <div class="nav-section-header">
+      <mat-icon class="section-icon admin-icon">settings</mat-icon>
+      <span>Admin</span>
     </div>
-
-    <div class="nav-badge-row">
-      <span class="admin-badge">Admin</span>
-    </div>
-
-    <mat-divider />
 
     <!-- Navigation links (role-filtered) -->
-    <mat-nav-list dense>
+    <mat-nav-list dense class="nav-list">
       @for (item of visibleItems; track item.path) {
         <a mat-list-item
            [routerLink]="item.path"
-           routerLinkActive="nav-active"
+           routerLinkActive="active"
            [matTooltip]="item.label"
            matTooltipPosition="right">
           <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
@@ -83,58 +70,47 @@ const NAV_ITEMS: NavItem[] = [
   styles: [`
     :host { display: flex; flex-direction: column; }
 
-    .nav-header {
+    .nav-section-header {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 16px 14px 10px;
-    }
-
-    .nav-header-icon {
-      font-size: 22px;
-      width: 22px;
-      height: 22px;
-      color: var(--mat-primary, #6200ea);
-    }
-
-    .nav-header-text {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .nav-title {
-      font-size: 13px;
-      font-weight: 700;
-      line-height: 1.3;
-    }
-
-    .nav-subtitle {
-      font-size: 11px;
-      color: var(--mat-secondary-text, #757575);
+      gap: 6px;
+      padding: 0 12px;
+      height: 40px;
+      font-size: 12px;
+      font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      color: var(--omni-text-muted);
     }
 
-    .nav-badge-row {
-      padding: 0 14px 10px;
+    .section-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: var(--omni-accent-light);
     }
 
-    .admin-badge {
-      display: inline-block;
-      background: var(--mat-warn, #e53935);
-      color: #fff;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-      padding: 2px 8px;
-      border-radius: 10px;
+    .admin-icon {
+      color: #e57373 !important;
     }
 
-    .nav-active {
-      background: rgba(98, 0, 234, 0.1) !important;
-      border-radius: 0 24px 24px 0;
-      font-weight: 600;
+    .nav-list a {
+      font-size: 13px;
+      height: 36px;
+      color: var(--omni-text-muted);
+      border-left: 3px solid transparent;
+      transition: color 0.15s, background 0.15s, border-color 0.15s;
+    }
+
+    .nav-list a:hover {
+      color: var(--omni-text);
+      background: rgba(255,255,255,0.04) !important;
+    }
+
+    .nav-list a.active {
+      color: var(--omni-text) !important;
+      background: rgba(124, 92, 191, 0.15) !important;
+      border-left: 3px solid var(--omni-accent);
     }
   `],
 })

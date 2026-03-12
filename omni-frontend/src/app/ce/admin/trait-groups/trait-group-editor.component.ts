@@ -84,7 +84,7 @@ import { Schema } from '../models/schema.model';
       </form>
     </div>
   `,
-  styles: [`@use 'panel-common' as *;`],
+  styleUrls: ['../_panel-common.scss'],
 })
 export class TraitGroupEditorComponent implements OnChanges {
   @Input() item: TraitGroup | null = null;

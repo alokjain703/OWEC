@@ -70,7 +70,7 @@ import { Schema } from '../models/schema.model';
       </form>
     </div>
   `,
-  styles: [`@use 'panel-common' as *;`],
+  styleUrls: ['../_panel-common.scss'],
 })
 export class RelationshipTypeEditorComponent implements OnChanges {
   @Input() item: RelationshipType | null = null;

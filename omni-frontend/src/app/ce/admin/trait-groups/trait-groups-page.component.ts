@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { MatDividerModule } from '@angular/material/divider';
+import { MatSidenavModule } from '@angular/material/sidenav';
 
 import { TraitGroup } from '../models/trait-group.model';
 import { Schema } from '../models/schema.model';
@@ -12,19 +12,12 @@ import { TraitGroupEditorComponent } from './trait-group-editor.component';
   selector: 'ce-admin-trait-groups-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatDividerModule, TraitGroupListComponent, TraitGroupEditorComponent],
+  imports: [MatSidenavModule, TraitGroupListComponent, TraitGroupEditorComponent],
   template: `
-    <div class="three-panel-page">
-      <trait-group-list
-        [items]="groups()"
-        [loading]="loading()"
-        [selectedId]="selected()?.id"
-        (selected)="onSelect($event)"
-        (create)="onNew()" />
-
-      <mat-divider [vertical]="true" />
-
-      <div class="editor-pane">
+    <mat-drawer-container class="page-container" autosize>
+      <mat-drawer position="end" mode="over"
+                  [opened]="selected() !== undefined"
+                  (closedStart)="onCancel()">
         @if (selected() !== undefined) {
           <trait-group-editor
             [item]="selected() ?? null"
@@ -33,13 +26,23 @@ import { TraitGroupEditorComponent } from './trait-group-editor.component';
             [errorMsg]="error()"
             (save)="onSave($event)"
             (cancel)="onCancel()" />
-        } @else {
-          <div class="editor-empty"><span>Select a trait group or click + to create one.</span></div>
         }
-      </div>
-    </div>
+      </mat-drawer>
+      <mat-drawer-content>
+        <trait-group-list
+          [items]="groups()"
+          [loading]="loading()"
+          [selectedId]="selected()?.id"
+          (selected)="onSelect($event)"
+          (create)="onNew()" />
+      </mat-drawer-content>
+    </mat-drawer-container>
   `,
-  styles: [`@use 'panel-common' as *;`],
+  styles: [`
+    :host { display: flex; flex: 1; overflow: hidden; }
+    .page-container { flex: 1; height: 100%; }
+    mat-drawer { width: 480px; border-left: 1px solid var(--omni-border); background: var(--omni-surface); }
+  `],
 })
 export class TraitGroupsPageComponent {
   private svc       = inject(TraitGroupService);

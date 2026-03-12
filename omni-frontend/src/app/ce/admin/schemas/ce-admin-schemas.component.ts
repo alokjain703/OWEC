@@ -112,9 +112,7 @@ import { CeSchema } from '../../models/ce-schema.model';
 
     </div>
   `,
-  styles: [`
-    @use 'panel-common' as *;
-  `],
+  styleUrls: ['../_panel-common.scss'],
 })
 export class CeAdminSchemasComponent {
   private svc = inject(CeSchemaService);

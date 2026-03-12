@@ -15,10 +15,10 @@ export type CeAdminRole = (typeof CE_ADMIN_ROLES)[number];
  * sc-acct-mgr — all sections
  */
 export const CE_ADMIN_PERMISSIONS: Record<string, CeAdminRole[]> = {
-  schemas:              ['sc-acct-mgr'],
+  'schemas':              ['sc-mgr','sc-acct-mgr' ],
   'trait-groups':       ['sc-mgr', 'sc-acct-mgr'],
-  'trait-defs':         ['sc-acct-mgr'],
-  'trait-options':      ['sc-acct-mgr'],
+  'trait-defs':         ['sc-mgr','sc-acct-mgr'],
+  'trait-options':      ['sc-mgr','sc-acct-mgr'],
   'trait-packs':        ['sc-mgr', 'sc-acct-mgr'],
   'relationship-types': ['sc-mgr', 'sc-acct-mgr'],
 };

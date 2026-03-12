@@ -105,7 +105,7 @@ class CeTraitGroupBase(BaseModel):
 
 
 class CeTraitGroupCreate(CeTraitGroupBase):
-    pass
+    id: Optional[str] = None
 
 
 class CeTraitGroupUpdate(BaseModel):
@@ -131,7 +131,7 @@ class CeTraitOptionBase(BaseModel):
 
 
 class CeTraitOptionCreate(CeTraitOptionBase):
-    pass
+    id: Optional[str] = None
 
 
 class CeTraitOptionUpdate(BaseModel):
@@ -152,6 +152,7 @@ class CeTraitPackBase(BaseModel):
 
 
 class CeTraitPackCreate(CeTraitPackBase):
+    id: Optional[str] = None
     trait_def_ids: list[str] = Field(default_factory=list)
 
 

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { MatDividerModule } from '@angular/material/divider';
+import { MatSidenavModule } from '@angular/material/sidenav';
 
 import { Schema } from '../models/schema.model';
 import { SchemaService } from './schema.service';
@@ -10,19 +10,12 @@ import { SchemaEditorComponent } from './schema-editor.component';
   selector: 'ce-admin-schemas-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatDividerModule, SchemaListComponent, SchemaEditorComponent],
+  imports: [MatSidenavModule, SchemaListComponent, SchemaEditorComponent],
   template: `
-    <div class="three-panel-page">
-      <schema-list
-        [items]="schemas()"
-        [loading]="loading()"
-        [selectedId]="selected()?.id"
-        (selected)="onSelect($event)"
-        (create)="onNew()" />
-
-      <mat-divider [vertical]="true" />
-
-      <div class="editor-pane">
+    <mat-drawer-container class="page-container" autosize>
+      <mat-drawer position="end" mode="over"
+                  [opened]="selected() !== undefined"
+                  (closedStart)="onCancel()">
         @if (selected() !== undefined) {
           <schema-editor
             [item]="selected() ?? null"
@@ -30,16 +23,22 @@ import { SchemaEditorComponent } from './schema-editor.component';
             [errorMsg]="error()"
             (save)="onSave($event)"
             (cancel)="onCancel()" />
-        } @else {
-          <div class="editor-empty">
-            <span>Select a schema or click + to create one.</span>
-          </div>
         }
-      </div>
-    </div>
+      </mat-drawer>
+      <mat-drawer-content>
+        <schema-list
+          [items]="schemas()"
+          [loading]="loading()"
+          [selectedId]="selected()?.id"
+          (selected)="onSelect($event)"
+          (create)="onNew()" />
+      </mat-drawer-content>
+    </mat-drawer-container>
   `,
   styles: [`
-    @use 'panel-common' as *;
+    :host { display: flex; flex: 1; overflow: hidden; }
+    .page-container { flex: 1; height: 100%; }
+    mat-drawer { width: 480px; border-left: 1px solid var(--omni-border); background: var(--omni-surface); }
   `],
 })
 export class SchemasPageComponent {

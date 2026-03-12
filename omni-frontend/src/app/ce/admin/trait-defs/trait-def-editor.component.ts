@@ -109,10 +109,8 @@ import { TraitGroup } from '../models/trait-group.model';
       </form>
     </div>
   `,
-  styles: [`
-    @use 'panel-common' as *;
-    .checkbox-row { padding: 4px 0 12px; }
-  `],
+  styleUrls: ['../_panel-common.scss'],
+  styles: [`.checkbox-row { padding: 4px 0 12px; }`],
 })
 export class TraitDefEditorComponent implements OnChanges {
   @Input() item: TraitDef | null  = null;

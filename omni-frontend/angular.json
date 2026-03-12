@@ -28,7 +28,7 @@
             "styles": ["src/styles.scss"],
             "scripts": [],
             "stylePreprocessorOptions": {
-              "includePaths": ["node_modules"]
+              "includePaths": ["node_modules", "src/app/ce/admin"]
             }
           },
           "configurations": {

@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatPaginatorModule } from '@angular/material/paginator';
 
 import { TraitDef } from '../models/trait-def.model';
 
@@ -21,6 +22,7 @@ import { TraitDef } from '../models/trait-def.model';
     MatListModule, MatIconModule, MatButtonModule,
     MatInputModule, MatFormFieldModule, MatDividerModule,
     MatProgressSpinnerModule, MatChipsModule,
+    MatPaginatorModule,
   ],
   template: `
     <div class="list-panel">
@@ -31,7 +33,7 @@ import { TraitDef } from '../models/trait-def.model';
 
       <mat-form-field appearance="outline" class="search-field">
         <mat-label>Search</mat-label>
-        <input matInput [(ngModel)]="query" placeholder="Filter by name…">
+        <input matInput [ngModel]="query" (ngModelChange)="query=$event; pageIndex=0" placeholder="Filter by name…">
         <mat-icon matSuffix>search</mat-icon>
       </mat-form-field>
 
@@ -47,7 +49,7 @@ import { TraitDef } from '../models/trait-def.model';
         <div class="center-spinner"><mat-spinner diameter="28" /></div>
       } @else {
         <mat-selection-list [multiple]="false" class="item-list">
-          @for (item of filtered; track item.id) {
+          @for (item of paged; track item.id) {
             <mat-list-option [value]="item" [selected]="selectedId === item.id" (click)="selected.emit(item)">
               <mat-icon matListItemIcon>tune</mat-icon>
               <div matListItemTitle class="row-content">
@@ -61,12 +63,16 @@ import { TraitDef } from '../models/trait-def.model';
             <mat-list-item disabled><span matListItemTitle class="empty-text">No trait definitions</span></mat-list-item>
           }
         </mat-selection-list>
+        @if (filtered.length > pageSize) {
+          <mat-paginator [length]="filtered.length" [pageSize]="pageSize"
+            [pageIndex]="pageIndex" [hidePageSize]="true"
+            (page)="pageIndex = $event.pageIndex" />
+        }
       }
     </div>
   `,
+  styleUrls: ['../_panel-common.scss'],
   styles: [`
-    @use 'panel-common' as *;
-    .list-panel { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
     .search-field { padding: 8px 12px 0; width: 100%; }
     .item-list { flex: 1; overflow-y: auto; }
     .col-header {
@@ -91,9 +97,16 @@ export class TraitDefListComponent {
   @Output() selected = new EventEmitter<TraitDef>();
   @Output() create   = new EventEmitter<void>();
 
-  query = '';
+  query    = '';
+  pageIndex = 0;
+  readonly pageSize = 10;
+
   get filtered(): TraitDef[] {
     const q = this.query.trim().toLowerCase();
     return q ? this.items.filter((t) => t.label.toLowerCase().includes(q) || t.name.toLowerCase().includes(q)) : this.items;
+  }
+
+  get paged(): TraitDef[] {
+    return this.filtered.slice(this.pageIndex * this.pageSize, (this.pageIndex + 1) * this.pageSize);
   }
 }

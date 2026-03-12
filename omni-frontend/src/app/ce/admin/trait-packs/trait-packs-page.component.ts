@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { MatDividerModule } from '@angular/material/divider';
+import { MatSidenavModule } from '@angular/material/sidenav';
 
 import { TraitPack } from '../models/trait-pack.model';
 import { TraitDef } from '../models/trait-def.model';
@@ -14,19 +14,12 @@ import { TraitPackEditorComponent } from './trait-pack-editor.component';
   selector: 'ce-admin-trait-packs-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatDividerModule, TraitPackListComponent, TraitPackEditorComponent],
+  imports: [MatSidenavModule, TraitPackListComponent, TraitPackEditorComponent],
   template: `
-    <div class="three-panel-page">
-      <trait-pack-list
-        [items]="packs()"
-        [loading]="loading()"
-        [selectedId]="selected()?.id"
-        (selected)="onSelect($event)"
-        (create)="onNew()" />
-
-      <mat-divider [vertical]="true" />
-
-      <div class="editor-pane">
+    <mat-drawer-container class="page-container" autosize>
+      <mat-drawer position="end" mode="over"
+                  [opened]="selected() !== undefined"
+                  (closedStart)="onCancel()">
         @if (selected() !== undefined) {
           <trait-pack-editor
             [item]="selected() ?? null"
@@ -36,13 +29,23 @@ import { TraitPackEditorComponent } from './trait-pack-editor.component';
             [errorMsg]="error()"
             (save)="onSave($event)"
             (cancel)="onCancel()" />
-        } @else {
-          <div class="editor-empty"><span>Select a trait pack or click + to create one.</span></div>
         }
-      </div>
-    </div>
+      </mat-drawer>
+      <mat-drawer-content>
+        <trait-pack-list
+          [items]="packs()"
+          [loading]="loading()"
+          [selectedId]="selected()?.id"
+          (selected)="onSelect($event)"
+          (create)="onNew()" />
+      </mat-drawer-content>
+    </mat-drawer-container>
   `,
-  styles: [`@use 'panel-common' as *;`],
+  styles: [`
+    :host { display: flex; flex: 1; overflow: hidden; }
+    .page-container { flex: 1; height: 100%; }
+    mat-drawer { width: 480px; border-left: 1px solid var(--omni-border); background: var(--omni-surface); }
+  `],
 })
 export class TraitPacksPageComponent {
   private svc       = inject(TraitPackService);

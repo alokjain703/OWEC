@@ -1,4 +1,6 @@
 """CE Trait service."""
+import uuid
+
 from app.modules.ce.models.ce_trait import CeTraitDef, CeTraitPack, CeTraitPackTrait
 from app.modules.ce.repositories.ce_trait_repository import CeTraitRepository
 from app.modules.ce.schemas import (
@@ -73,7 +75,7 @@ class CeTraitService:
 
     async def create_pack(self, data: CeTraitPackCreate) -> CeTraitPack:
         pack = CeTraitPack(
-            id=data.id,
+            id=data.id or str(uuid.uuid4()),
             schema_id=data.schema_id,
             name=data.name,
             description=data.description,

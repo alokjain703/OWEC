@@ -17,12 +17,17 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   console.log('[AuthInterceptor] Request to:', req.url, 'Has token:', !!token);
 
-  // If we have a token, clone the request and add the Authorization header
+  // Build headers: Authorization + X-User-Roles
+  const roles = authState.getCurrentUser()?.roles ?? [];
+  const rolesHeader = roles.join(',');
+
   if (token) {
-    const clonedRequest = req.clone({
-      headers: req.headers.set('Authorization', `Bearer ${token}`)
-    });
-    console.log('[AuthInterceptor] Added Authorization header');
+    let headers = req.headers.set('Authorization', `Bearer ${token}`);
+    if (rolesHeader) {
+      headers = headers.set('X-User-Roles', rolesHeader);
+    }
+    const clonedRequest = req.clone({ headers });
+    console.log('[AuthInterceptor] Added Authorization header, roles:', rolesHeader || '(none)');
     return next(clonedRequest);
   }
 

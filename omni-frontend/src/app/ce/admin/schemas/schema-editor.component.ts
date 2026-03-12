@@ -91,9 +91,7 @@ import { Schema } from '../models/schema.model';
       </form>
     </div>
   `,
-  styles: [`
-    @use 'panel-common' as *;
-  `],
+  styleUrls: ['../_panel-common.scss'],
 })
 export class SchemaEditorComponent implements OnChanges {
   @Input() item: Schema | null = null;

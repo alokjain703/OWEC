@@ -1,0 +1,6 @@
+@import '../panel-common';
+
+.search-field { padding: 8px 12px 0; width: 100%; }
+.item-list { flex: 1; overflow-y: auto; }
+.id-line { font-size: 11px; color: var(--mat-secondary-text, #757575); }
+.empty-text { font-style: italic; color: var(--mat-secondary-text, #757575); }
