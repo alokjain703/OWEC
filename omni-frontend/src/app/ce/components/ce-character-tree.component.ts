@@ -5,10 +5,12 @@ import {
   Input,
   OnChanges,
   Output,
+  inject,
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -22,6 +24,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { CeEntity } from '../models/ce-entity.model';
 import { CeSchema } from '../models/ce-schema.model';
 import { CeTraitPack } from '../models/ce-trait.model';
+import { AuthStateService } from '../../core/services/auth-state.service';
+import { hasAdminRole } from '../admin/guards/ce-admin.guard';
 
 export interface CeTreeFilter {
   search: string;
@@ -36,6 +40,7 @@ export interface CeTreeFilter {
   imports: [
     CommonModule,
     FormsModule,
+    RouterModule,
     MatIconModule,
     MatListModule,
     MatFormFieldModule,
@@ -148,6 +153,47 @@ export interface CeTreeFilter {
         </mat-nav-list>
       </mat-expansion-panel>
 
+      @if (isAdmin()) {
+        <mat-divider />
+
+        <!-- Admin section -->
+        <mat-expansion-panel class="tree-panel" [expanded]="true" hideToggle>
+          <mat-expansion-panel-header>
+            <mat-panel-title class="admin-panel-title">
+              <mat-icon class="section-icon admin-icon">settings</mat-icon>
+              <span>Admin</span>
+            </mat-panel-title>
+          </mat-expansion-panel-header>
+
+          <mat-nav-list dense class="tree-list">
+            <a mat-list-item routerLink="/ce/admin/schemas" routerLinkActive="active">
+              <mat-icon matListItemIcon>schema</mat-icon>
+              <span matListItemTitle>Schemas</span>
+            </a>
+            <a mat-list-item routerLink="/ce/admin/trait-groups" routerLinkActive="active">
+              <mat-icon matListItemIcon>folder</mat-icon>
+              <span matListItemTitle>Trait Groups</span>
+            </a>
+            <a mat-list-item routerLink="/ce/admin/trait-defs" routerLinkActive="active">
+              <mat-icon matListItemIcon>tune</mat-icon>
+              <span matListItemTitle>Trait Definitions</span>
+            </a>
+            <a mat-list-item routerLink="/ce/admin/trait-options" routerLinkActive="active">
+              <mat-icon matListItemIcon>checklist</mat-icon>
+              <span matListItemTitle>Trait Options</span>
+            </a>
+            <a mat-list-item routerLink="/ce/admin/trait-packs" routerLinkActive="active">
+              <mat-icon matListItemIcon>inventory_2</mat-icon>
+              <span matListItemTitle>Trait Packs</span>
+            </a>
+            <a mat-list-item routerLink="/ce/admin/relationship-types" routerLinkActive="active">
+              <mat-icon matListItemIcon>share</mat-icon>
+              <span matListItemTitle>Relationship Types</span>
+            </a>
+          </mat-nav-list>
+        </mat-expansion-panel>
+      }
+
     </div>
   `,
   styles: [`
@@ -235,20 +281,33 @@ export interface CeTreeFilter {
       padding: 4px 16px;
       margin: 0;
     }
+
+    .admin-panel-title {
+      color: var(--omni-text-muted);
+    }
+
+    .admin-icon {
+      color: #e57373 !important;
+    }
   `],
 })
 export class CeCharacterTreeComponent implements OnChanges {
+  private auth = inject(AuthStateService);
+
   @Input() entities: CeEntity[] = [];
   @Input() schemas: CeSchema[] = [];
   @Input() traitPacks: CeTraitPack[] = [];
 
   @Output() filterChanged = new EventEmitter<CeTreeFilter>();
 
+  isAdmin = signal(false);
+
   searchTerm = '';
   activeSchemaId = signal<string | null>(null);
   activeTraitPackId = signal<string | null>(null);
 
   ngOnChanges(): void {
+    this.isAdmin.set(hasAdminRole(this.auth, 'sc-mgr', 'sc-acct-mgr'));
     this.emitFilter();
   }
 

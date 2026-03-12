@@ -14,4 +14,16 @@ export class CeSchemaService {
   listSchemas(): Observable<CeSchema[]> {
     return this.http.get<CeSchema[]>(`${this.base}/schemas`);
   }
+
+  createSchema(payload: Pick<CeSchema, 'id' | 'name'> & { description?: string }): Observable<CeSchema> {
+    return this.http.post<CeSchema>(`${this.base}/schemas`, payload);
+  }
+
+  updateSchema(id: string, payload: Partial<Pick<CeSchema, 'name' | 'description'>>): Observable<CeSchema> {
+    return this.http.put<CeSchema>(`${this.base}/schemas/${id}`, payload);
+  }
+
+  deleteSchema(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/schemas/${id}`);
+  }
 }

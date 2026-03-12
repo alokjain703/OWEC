@@ -141,8 +141,10 @@ import { CeRelationshipService } from '../services/ce-relationship.service';
           @if (saving()) {
             <mat-spinner diameter="18" />
           } @else {
-            <mat-icon>add_link</mat-icon>
-            Create
+            <ng-container>
+              <mat-icon>add_link</mat-icon>
+              Create
+            </ng-container>
           }
         </button>
       </div>
