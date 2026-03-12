@@ -218,8 +218,11 @@ class CeRelationshipTypeBase(BaseModel):
     description: Optional[str] = None
 
 
-class CeRelationshipTypeCreate(CeRelationshipTypeBase):
-    pass
+class CeRelationshipTypeCreate(BaseModel):
+    id: Optional[str] = None
+    schema_id: str
+    name: str
+    description: Optional[str] = None
 
 
 class CeRelationshipTypeUpdate(BaseModel):

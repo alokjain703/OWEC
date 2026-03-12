@@ -26,7 +26,7 @@ export class RelationshipTypeService {
     return this.http.get<RelationshipTypeApi>(`${this.base}/${id}`).pipe(map(this.fromApi));
   }
 
-  create(data: Omit<RelationshipType, 'id'>): Observable<RelationshipType> {
+  create(data: RelationshipType): Observable<RelationshipType> {
     return this.http.post<RelationshipTypeApi>(this.base, this.toApi(data)).pipe(map(this.fromApi));
   }
 
@@ -45,8 +45,9 @@ export class RelationshipTypeService {
     description: raw.description,
   });
 
-  private toApi(data: Partial<Omit<RelationshipType, 'id'>>): Partial<RelationshipTypeApi> {
+  private toApi(data: Partial<RelationshipType>): Partial<RelationshipTypeApi> {
     const out: Partial<RelationshipTypeApi> = {};
+    if (data.id          !== undefined) out.id          = data.id;
     if (data.schemaId    !== undefined) out.schema_id   = data.schemaId;
     if (data.name        !== undefined) out.name        = data.name;
     if (data.description !== undefined) out.description = data.description;

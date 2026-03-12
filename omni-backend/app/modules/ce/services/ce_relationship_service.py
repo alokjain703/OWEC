@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.ce.models.ce_relationship import CeRelationship, CeRelationshipType
 from app.modules.ce.models.ce_entity import CeEntity
 from app.modules.ce.repositories.ce_relationship_repository import CeRelationshipRepository
+import uuid
+
 from app.modules.ce.schemas import (
     CeRelationshipCreate,
     CeRelationshipUpdate,
@@ -65,7 +67,7 @@ class CeRelationshipService:
 
     async def create_type(self, data: CeRelationshipTypeCreate) -> CeRelationshipType:
         rel_type = CeRelationshipType(
-            id=data.id,
+            id=data.id or str(uuid.uuid4()),
             schema_id=data.schema_id,
             name=data.name,
             description=data.description,

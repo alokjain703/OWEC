@@ -67,7 +67,7 @@ export class RelationshipTypesPageComponent {
   onNew():                                    void { this.selected.set(null); this.error.set(''); }
   onCancel():                                 void { this.selected.set(undefined); }
 
-  onSave(payload: Omit<RelationshipType, 'id'>): void {
+  onSave(payload: RelationshipType): void {
     this.saving.set(true);
     this.error.set('');
     const isNew = !this.selected();
