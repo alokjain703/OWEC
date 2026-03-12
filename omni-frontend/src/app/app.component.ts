@@ -1,8 +1,9 @@
 import { Component, inject, signal, computed } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { filter } from 'rxjs';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatListModule } from '@angular/material/list';
@@ -24,6 +25,11 @@ interface NavItem {
   label: string;
   icon: string;
   tooltip: string;
+}
+
+interface Breadcrumb {
+  label: string;
+  path?: string;
 }
 
 @Component({
@@ -171,6 +177,22 @@ interface NavItem {
             <mat-icon>settings</mat-icon>
           </button>
         </mat-toolbar>
+
+        <!-- Routed feature views -->
+        @if (breadcrumbs().length > 0) {
+          <div class="omni-breadcrumb-bar">
+            @for (crumb of breadcrumbs(); track crumb.label; let last = $last) {
+              @if (crumb.path && !last) {
+                <a class="crumb-link" [routerLink]="crumb.path">{{ crumb.label }}</a>
+              } @else {
+                <span class="crumb-current">{{ crumb.label }}</span>
+              }
+              @if (!last) {
+                <mat-icon class="crumb-sep">chevron_right</mat-icon>
+              }
+            }
+          </div>
+        }
 
         <!-- Routed feature views -->
         <div class="omni-view-area">
@@ -343,10 +365,46 @@ interface NavItem {
     }
 
     /* ── Content area ── */
-    .omni-content { background: var(--omni-bg); }
+    .omni-content {
+      background: var(--omni-bg);
+      display: flex !important;
+      flex-direction: column;
+    }
+
+    .omni-breadcrumb-bar {
+      display: flex;
+      align-items: center;
+      height: 32px;
+      padding: 0 16px;
+      gap: 2px;
+      background: var(--omni-surface);
+      border-bottom: 1px solid var(--omni-border);
+      flex-shrink: 0;
+    }
+    .crumb-link {
+      font-size: 12px;
+      color: var(--omni-accent-light);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .crumb-link:hover { text-decoration: underline; }
+    .crumb-current {
+      font-size: 12px;
+      color: var(--omni-text);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .crumb-sep {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+      color: var(--omni-text-muted);
+    }
+
     .omni-view-area {
-      height: calc(100vh - 56px);
+      flex: 1;
       overflow: auto;
+      min-height: 0;
     }
   `],
 })
@@ -363,6 +421,30 @@ export class AppComponent {
   isMobile = signal(false);
   sidenavOpen = signal(true);
   sidenavMode = signal<'side' | 'over'>('side');
+  breadcrumbs = signal<Breadcrumb[]>([]);
+
+  // Segment → human-readable label map
+  private readonly LABELS: Record<string, string> = {
+    dashboard: 'Dashboard',
+    user: 'User',
+    manager: 'Manager',
+    schemas: 'Schemas',
+    ce: 'Character Engine',
+    admin: 'Admin',
+    'trait-groups': 'Trait Groups',
+    'trait-defs': 'Trait Definitions',
+    'trait-options': 'Trait Options',
+    'trait-packs': 'Trait Packs',
+    'relationship-types': 'Relationship Types',
+    graph: 'Graph',
+    relationships: 'Relationships',
+    projects: 'Projects',
+    tree: 'Tree',
+    characters: 'Characters',
+    timeline: 'Timeline',
+    profile: 'Profile',
+    settings: 'Settings',
+  };
   
   // Auth observables
   currentUser$ = this.authState.currentUser$;
@@ -402,6 +484,13 @@ export class AppComponent {
         this.sidenavMode.set(result.matches ? 'over' : 'side');
         this.sidenavOpen.set(!result.matches);
       });
+
+    // Build breadcrumbs on every navigation
+    this.router.events
+      .pipe(filter(e => e instanceof NavigationEnd), takeUntilDestroyed())
+      .subscribe((e) => this.breadcrumbs.set(this.buildBreadcrumbs((e as NavigationEnd).urlAfterRedirects)));
+    // Set breadcrumbs for the initial URL (page load / refresh)
+    this.breadcrumbs.set(this.buildBreadcrumbs(this.router.url));
       
     // Check auth state on app init
     this.authState.refresh();
@@ -453,6 +542,27 @@ export class AppComponent {
     this.workspaceState.clearSelection();
     // Navigate to the dashboard for the selected role
     this.roleRouting.navigateToDashboard(role);
+  }
+
+  private buildBreadcrumbs(url: string): Breadcrumb[] {
+    const clean = url.split('?')[0];
+    const segments = clean.split('/').filter(Boolean);
+    if (!segments.length) return [];
+
+    const crumbs: Breadcrumb[] = [];
+    let accumulated = '';
+    for (const seg of segments) {
+      accumulated += '/' + seg;
+      // Skip UUID-like segments as labels but keep path accumulation
+      const isId = /^[0-9a-f-]{8,}$/i.test(seg);
+      if (!isId) {
+        crumbs.push({
+          label: this.LABELS[seg] ?? seg.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          path: accumulated,
+        });
+      }
+    }
+    return crumbs;
   }
 }
 

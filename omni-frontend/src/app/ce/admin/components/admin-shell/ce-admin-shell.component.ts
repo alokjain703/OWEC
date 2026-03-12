@@ -17,12 +17,30 @@ import { CeAdminNavigationComponent } from '../admin-navigation/ce-admin-navigat
   imports: [RouterOutlet, CeAdminNavigationComponent],
   templateUrl: './ce-admin-shell.component.html',
   styles: [`
-    :host { display: flex; height: 100%; overflow: hidden; }
+    :host { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+
+    .admin-shell-header {
+      display: flex;
+      align-items: center;
+      height: 40px;
+      padding: 0 16px;
+      background: var(--omni-surface);
+      border-bottom: 1px solid var(--mat-divider, #e0e0e0);
+      flex-shrink: 0;
+    }
+
+    .admin-shell-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--mat-secondary-text, #777);
+    }
 
     .admin-shell {
       display: flex;
       width: 100%;
-      height: 100%;
+      flex: 1;
       overflow: hidden;
     }
 
@@ -42,4 +60,6 @@ import { CeAdminNavigationComponent } from '../admin-navigation/ce-admin-navigat
     }
   `],
 })
-export class CeAdminShellComponent {}
+export class CeAdminShellComponent {
+  readonly title = 'Character Engine Admin';
+}

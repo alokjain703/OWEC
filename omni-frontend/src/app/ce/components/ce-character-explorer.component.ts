@@ -45,6 +45,10 @@ import { CeCharacterEditorComponent } from './ce-character-editor.component';
     CeCharacterEditorComponent,
   ],
   template: `
+    <header class="explorer-header">
+      <span class="explorer-title">{{ title }}</span>
+    </header>
+
     @if (loading()) {
       <mat-progress-bar mode="indeterminate" class="explorer-progress" />
     }
@@ -193,6 +197,24 @@ import { CeCharacterEditorComponent } from './ce-character-editor.component';
       gap: 8px;
     }
 
+    .explorer-header {
+      display: flex;
+      align-items: center;
+      height: 40px;
+      padding: 0 16px;
+      background: var(--omni-surface);
+      border-bottom: 1px solid var(--omni-border);
+      flex-shrink: 0;
+    }
+
+    .explorer-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--omni-text-secondary, #888);
+    }
+
     .inspector-flex {
       flex: 1;
       overflow: hidden;
@@ -200,6 +222,8 @@ import { CeCharacterEditorComponent } from './ce-character-editor.component';
   `],
 })
 export class CeCharacterExplorerComponent implements OnInit {
+  readonly title = 'Character Engine';
+
   private entitySvc = inject(CeEntityService);
   private traitSvc = inject(CeTraitService);
   private relSvc = inject(CeRelationshipService);

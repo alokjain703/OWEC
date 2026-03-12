@@ -43,6 +43,10 @@ const ALL_NAV_ITEMS: AdminNavItem[] = [
     MatDividerModule,
   ],
   template: `
+    <header class="admin-shell-header">
+      <span class="admin-shell-title">{{ title }}</span>
+    </header>
+
     <div class="admin-shell">
 
       <!-- LEFT: Navigation panel -->
@@ -71,12 +75,30 @@ const ALL_NAV_ITEMS: AdminNavItem[] = [
     </div>
   `,
   styles: [`
-    :host { display: flex; height: 100%; }
+    :host { display: flex; flex-direction: column; height: 100%; }
+
+    .admin-shell-header {
+      display: flex;
+      align-items: center;
+      height: 40px;
+      padding: 0 16px;
+      background: var(--omni-surface);
+      border-bottom: 1px solid var(--mat-divider, #e0e0e0);
+      flex-shrink: 0;
+    }
+
+    .admin-shell-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--mat-secondary-text, #777);
+    }
 
     .admin-shell {
       display: flex;
       width: 100%;
-      height: 100%;
+      flex: 1;
       overflow: hidden;
     }
 
@@ -119,6 +141,8 @@ const ALL_NAV_ITEMS: AdminNavItem[] = [
   `],
 })
 export class CeAdminShellComponent {
+  readonly title = 'Character Engine Admin';
+
   private authState = inject(AuthStateService);
 
   get visibleNavItems(): AdminNavItem[] {
