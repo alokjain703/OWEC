@@ -27,6 +27,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { Router } from '@angular/router';
 
 import { CeEntity } from '../models/ce-entity.model';
+import { FavoriteToggleComponent } from '../../features/my-workspace/components/favorite-toggle.component';
 
 type TableView = 'table' | 'cards';
 
@@ -47,6 +48,7 @@ type TableView = 'table' | 'cards';
     MatCardModule,
     MatMenuModule,
     MatToolbarModule,
+    FavoriteToggleComponent,
   ],
   template: `
     <!-- Workspace Toolbar -->
@@ -148,6 +150,10 @@ type TableView = 'table' | 'cards';
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let entity">
+                <omni-favorite-toggle
+                  objectType="ce_entity"
+                  [objectId]="entity.id"
+                  [metadata]="{ name: entity.name, schema: entity.schema }" />
                 <button mat-icon-button matTooltip="Edit" (click)="$event.stopPropagation(); editEntity(entity)">
                   <mat-icon>edit</mat-icon>
                 </button>
@@ -191,6 +197,10 @@ type TableView = 'table' | 'cards';
               </div>
             </mat-card-content>
             <mat-card-actions>
+              <omni-favorite-toggle
+                objectType="ce_entity"
+                [objectId]="entity.id"
+                [metadata]="{ name: entity.name, schema: entity.schema }" />
               <button mat-button color="primary" (click)="$event.stopPropagation(); editEntity(entity)">
                 <mat-icon>edit</mat-icon> Edit
               </button>
