@@ -11,6 +11,7 @@ from app.config.settings import settings
 from app.db.session import engine, Base
 from app.api.v1.router import api_router
 from app.modules.ce.router import router as ce_router
+from app.modules.user_context.router import router as uc_router
 
 
 @asynccontextmanager
@@ -48,6 +49,8 @@ def create_application() -> FastAPI:
     application.include_router(api_router, prefix="/api/v1")
     # CE alias without version prefix
     application.include_router(ce_router, prefix="/api")
+    # User Context
+    application.include_router(uc_router, prefix="/api")
 
     # ── Health ────────────────────────────────────────────────────────────────
     @application.get("/health", tags=["health"], include_in_schema=True)

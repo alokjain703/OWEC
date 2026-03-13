@@ -13,3 +13,7 @@ from app.modules.ce.models.ce_entity import CeEntity, CeEntityTrait  # noqa: F40
 from app.modules.ce.models.ce_relationship import CeRelationshipType, CeRelationship  # noqa: F401
 from app.modules.ce.models.ce_ai_trait import CeAiTrait  # noqa: F401
 from app.modules.ce.models.ce_trait_group import CeTraitGroup, CeTraitOption  # noqa: F401
+from app.modules.user_context.models.user_settings_model import UserSettings  # noqa: F401
+from app.modules.user_context.models.user_preferences_model import UserPreference  # noqa: F401
+from app.modules.user_context.models.user_activity_model import UserActivity  # noqa: F401
+from app.modules.user_context.models.user_bookmarks_model import UserBookmark  # noqa: F401
