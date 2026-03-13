@@ -27,6 +27,7 @@ import { CeResolvedTrait } from '../models/ce-trait.model';
 import { CeSchema } from '../models/ce-schema.model';
 import { CeTemplateSelectorComponent } from './ce-template-selector.component';
 import { CeTraitEditorComponent } from './ce-trait-editor.component';
+import { FavoriteToggleComponent } from '../../features/my-workspace/components/favorite-toggle.component';
 
 @Component({
   selector: 'ce-character-editor',
@@ -47,6 +48,7 @@ import { CeTraitEditorComponent } from './ce-trait-editor.component';
     MatSnackBarModule,
     CeTemplateSelectorComponent,
     CeTraitEditorComponent,
+    FavoriteToggleComponent,
   ],
   template: `
     <mat-card class="ce-editor">
@@ -61,6 +63,13 @@ import { CeTraitEditorComponent } from './ce-trait-editor.component';
           {{ isCreateMode() ? 'New Character' : (characterName() || entity()?.name || 'Character') }}
         </mat-card-title>
         <mat-card-subtitle>{{ isCreateMode() ? 'Fill in details and save to create' : (entity()?.id || '') }}</mat-card-subtitle>
+        @if (!isCreateMode() && entity()?.id) {
+          <omni-favorite-toggle
+            class="header-fav"
+            objectType="ce_entity"
+            [objectId]="entity()!.id"
+            [metadata]="{ name: entity()?.name, schema: entity()?.schema }" />
+        }
       </mat-card-header>
 
       <mat-card-content>
