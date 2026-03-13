@@ -12,6 +12,7 @@ class CeSchemaBase(BaseModel):
     id: str
     name: str
     description: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class CeSchemaCreate(CeSchemaBase):
@@ -21,10 +22,12 @@ class CeSchemaCreate(CeSchemaBase):
 class CeSchemaUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class CeSchemaOut(CeSchemaBase):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+    metadata: Dict[str, Any] = Field(default_factory=dict, validation_alias="metadata_")
     created_at: datetime
     updated_at: datetime
 

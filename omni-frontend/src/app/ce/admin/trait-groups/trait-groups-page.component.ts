@@ -31,6 +31,7 @@ import { TraitGroupEditorComponent } from './trait-group-editor.component';
       <mat-drawer-content>
         <trait-group-list
           [items]="groups()"
+          [schemas]="schemas()"
           [loading]="loading()"
           [selectedId]="selected()?.id"
           (selected)="onSelect($event)"

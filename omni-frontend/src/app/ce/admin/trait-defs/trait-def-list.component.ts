@@ -11,7 +11,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatPaginatorModule } from '@angular/material/paginator';
 
-import { TraitDef } from '../models/trait-def.model';
+import { TraitDef, TRAIT_VALUE_TYPE_LABELS } from '../models/trait-def.model';
+import { TraitGroup } from '../models/trait-group.model';
+import { Schema } from '../models/schema.model';
 
 @Component({
   selector: 'trait-def-list',
@@ -40,7 +42,9 @@ import { TraitDef } from '../models/trait-def.model';
       <mat-divider />
 
       <div class="col-header">
+        <span class="col-icon-spacer"></span>
         <span class="col-name">Name</span>
+        <span class="col-schema">Schema</span>
         <span class="col-type">Type</span>
         <span class="col-group">Group</span>
       </div>
@@ -54,8 +58,9 @@ import { TraitDef } from '../models/trait-def.model';
               <mat-icon matListItemIcon>tune</mat-icon>
               <div matListItemTitle class="row-content">
                 <span class="col-name">{{ item.label }}</span>
-                <mat-chip class="col-type chip-type">{{ item.valueType }}</mat-chip>
-                <span class="col-group meta-text">{{ item.groupId || '—' }}</span>
+                <span class="col-schema meta-text">{{ schemaName(item.schemaId) }}</span>
+                <mat-chip class="col-type chip-type">{{ valueTypeLabel(item.valueType) }}</mat-chip>
+                <span class="col-group meta-text">{{ groupName(item.groupId) }}</span>
               </div>
             </mat-list-option>
           }
@@ -76,22 +81,26 @@ import { TraitDef } from '../models/trait-def.model';
     .search-field { padding: 8px 12px 0; width: 100%; }
     .item-list { flex: 1; overflow-y: auto; }
     .col-header {
-      display: flex; padding: 4px 16px;
+      display: flex; align-items: center; padding: 4px 16px;
       font-size: 11px; font-weight: 600; text-transform: uppercase;
       color: var(--mat-secondary-text, #757575);
     }
+    .col-icon-spacer { flex: 0 0 60px; }
     .row-content { display: flex; align-items: center; gap: 8px; width: 100%; }
-    .col-name  { flex: 1; }
-    .col-type  { width: 90px; }
-    .col-group { width: 80px; font-size: 11px; }
+    .col-name   { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .col-schema { flex: 0 0 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .col-type   { flex: 0 0 100px; }
+    .col-group  { flex: 0 0 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
     .chip-type { font-size: 10px !important; height: 20px !important; }
     .meta-text { color: var(--mat-secondary-text, #757575); }
     .empty-text { font-style: italic; color: var(--mat-secondary-text, #757575); }
   `],
 })
 export class TraitDefListComponent {
-  @Input() items: TraitDef[] = [];
-  @Input() loading            = false;
+  @Input() items: TraitDef[]       = [];
+  @Input() schemas: Schema[]       = [];
+  @Input() traitGroups: TraitGroup[] = [];
+  @Input() loading                 = false;
   @Input() selectedId?: string;
 
   @Output() selected = new EventEmitter<TraitDef>();
@@ -100,6 +109,20 @@ export class TraitDefListComponent {
   query    = '';
   pageIndex = 0;
   readonly pageSize = 10;
+
+  schemaName(id: string): string {
+    return this.schemas.find(s => s.id === id)?.name ?? id;
+  }
+
+  groupName(id: string): string {
+    if (!id) return '—';
+    const g = this.traitGroups.find(g => g.id === id);
+    return g ? (g.label || g.name) : id;
+  }
+
+  valueTypeLabel(v: string): string {
+    return TRAIT_VALUE_TYPE_LABELS[v as keyof typeof TRAIT_VALUE_TYPE_LABELS] ?? v;
+  }
 
   get filtered(): TraitDef[] {
     const q = this.query.trim().toLowerCase();

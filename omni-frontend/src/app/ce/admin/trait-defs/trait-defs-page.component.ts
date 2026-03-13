@@ -34,6 +34,8 @@ import { TraitDefEditorComponent } from './trait-def-editor.component';
       <mat-drawer-content>
         <trait-def-list
           [items]="defs()"
+          [schemas]="schemas()"
+          [traitGroups]="traitGroups()"
           [loading]="loading()"
           [selectedId]="selected()?.id"
           (selected)="onSelect($event)"

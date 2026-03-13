@@ -63,17 +63,12 @@ import { Schema } from '../models/schema.model';
           <textarea matInput formControlName="description" rows="3"></textarea>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="field-half">
-          <mat-label>Icon (Material icon name)</mat-label>
-          <input matInput formControlName="icon" placeholder="e.g. person">
-          @if (form.get('icon')?.value) {
-            <mat-icon matSuffix>{{ form.get('icon')!.value }}</mat-icon>
+        <mat-form-field appearance="outline" class="field-full">
+          <mat-label>Metadata (JSON)</mat-label>
+          <textarea matInput formControlName="metadata" rows="5" placeholder='{"key": "value"}'></textarea>
+          @if (form.get('metadata')?.hasError('invalidJson')) {
+            <mat-error>Must be valid JSON</mat-error>
           }
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="field-half">
-          <mat-label>Color (hex)</mat-label>
-          <input matInput formControlName="color" placeholder="#6200ea">
         </mat-form-field>
 
         @if (errorMsg) {
@@ -107,8 +102,10 @@ export class SchemaEditorComponent implements OnChanges {
     id:          ['', Validators.required],
     name:        ['', Validators.required],
     description: [''],
-    icon:        [''],
-    color:       [''],
+    metadata:    ['{}', (ctrl: import('@angular/forms').AbstractControl) => {
+      try { JSON.parse(ctrl.value || '{}'); return null; }
+      catch { return { invalidJson: true }; }
+    }],
   });
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -118,12 +115,11 @@ export class SchemaEditorComponent implements OnChanges {
           id:          this.item.id,
           name:        this.item.name,
           description: this.item.description ?? '',
-          icon:        this.item.icon ?? '',
-          color:       this.item.color ?? '',
+          metadata:    JSON.stringify(this.item.metadata ?? {}, null, 2),
         });
         this.form.get('id')?.disable();
       } else {
-        this.form.reset();
+        this.form.reset({ metadata: '{}' });
         this.form.get('id')?.enable();
       }
     }
@@ -135,9 +131,8 @@ export class SchemaEditorComponent implements OnChanges {
     this.save.emit({
       id:          val.id ?? '',
       name:        val.name ?? '',
-      description: val.description ?? undefined,
-      icon:        val.icon       || undefined,
-      color:       val.color      || undefined,
+      description: val.description || undefined,
+      metadata:    JSON.parse(val.metadata || '{}'),
     });
   }
 }

@@ -20,7 +20,12 @@ class CeSchemaService:
         return schema
 
     async def create(self, data: CeSchemaCreate) -> CeSchema:
-        schema = CeSchema(id=data.id, name=data.name, description=data.description)
+        schema = CeSchema(
+            id=data.id,
+            name=data.name,
+            description=data.description,
+            metadata_=data.metadata if data.metadata is not None else {},
+        )
         return await self.repo.create(schema)
 
     async def update(self, schema_id: str, data: CeSchemaUpdate) -> CeSchema:
@@ -29,6 +34,8 @@ class CeSchemaService:
             schema.name = data.name
         if data.description is not None:
             schema.description = data.description
+        if data.metadata is not None:
+            schema.metadata_ = data.metadata
         return schema
 
     async def delete(self, schema_id: str) -> None:

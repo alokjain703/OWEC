@@ -9,8 +9,11 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { Schema } from '../models/schema.model';
+
+const DESCRIPTION_MAX_LEN = 80;
 
 /**
  * CENTER PANEL — scrollable list of schemas with search.
@@ -31,6 +34,7 @@ import { Schema } from '../models/schema.model';
     MatDividerModule,
     MatProgressSpinnerModule,
     MatPaginatorModule,
+    MatTooltipModule,
   ],
   template: `
     <div class="list-panel">
@@ -52,6 +56,14 @@ import { Schema } from '../models/schema.model';
 
       <mat-divider />
 
+      <div class="col-header">
+        <span class="col-icon-spacer"></span>
+        <span class="col-name">Name</span>
+        <span class="col-id">ID</span>
+        <span class="col-desc">Description</span>
+        <span class="col-meta">Metadata Keys</span>
+      </div>
+
       @if (loading) {
         <div class="center-spinner"><mat-spinner diameter="28" /></div>
       } @else {
@@ -62,8 +74,15 @@ import { Schema } from '../models/schema.model';
               [selected]="selectedId === item.id"
               (click)="selected.emit(item)">
               <mat-icon matListItemIcon>schema</mat-icon>
-              <span matListItemTitle>{{ item.name }}</span>
-              <span matListItemLine class="id-line">{{ item.id }}</span>
+              <div matListItemTitle class="row-content">
+                <span class="col-name">{{ item.name }}</span>
+                <span class="col-id meta-text">{{ item.id }}</span>
+                <span class="col-desc meta-text"
+                      [matTooltip]="item.description ?? ''"
+                      [matTooltipDisabled]="!item.description"
+                      matTooltipShowDelay="300">{{ truncate(item.description ?? '') }}</span>
+                <span class="col-meta meta-text">{{ metaKeys(item) }}</span>
+              </div>
             </mat-list-option>
           }
           @if (filtered.length === 0) {
@@ -85,7 +104,18 @@ import { Schema } from '../models/schema.model';
   styles: [`
     .search-field { padding: 8px 12px 0; width: 100%; }
     .item-list { flex: 1; overflow-y: auto; }
-    .id-line { font-size: 11px; color: var(--mat-secondary-text, #757575); }
+    .col-header {
+      display: flex; align-items: center; padding: 4px 16px;
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      color: var(--mat-secondary-text, #757575);
+    }
+    .col-icon-spacer { flex: 0 0 60px; }
+    .row-content { display: flex; align-items: center; gap: 8px; width: 100%; overflow: hidden; }
+    .col-name { flex: 0 0 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .col-id   { flex: 0 0 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .col-desc { flex: 2; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; }
+    .col-meta { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .meta-text  { font-size: 12px; color: var(--mat-secondary-text, #757575); }
     .empty-text { font-style: italic; color: var(--mat-secondary-text, #757575); }
   `],
 })
@@ -100,6 +130,15 @@ export class SchemaListComponent {
   query    = '';
   pageIndex = 0;
   readonly pageSize = 10;
+
+  truncate(text: string): string {
+    return text.length > DESCRIPTION_MAX_LEN ? text.slice(0, DESCRIPTION_MAX_LEN) + '\u2026' : text;
+  }
+
+  metaKeys(item: Schema): string {
+    const keys = Object.keys(item.metadata ?? {});
+    return keys.length ? keys.join(', ') : '—';
+  }
 
   get filtered(): Schema[] {
     const q = this.query.trim().toLowerCase();
