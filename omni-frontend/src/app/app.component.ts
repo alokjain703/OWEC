@@ -19,6 +19,7 @@ import { AuthStateService } from './core/services/auth-state.service';
 import { AuthService } from './core/services/auth.service';
 import { RoleRoutingService } from './core/services/role-routing.service';
 import { WorkspaceStateService } from './core/services/workspace-state.service';
+import { AvatarMenuComponent } from './features/my-workspace/menus/avatar-menu.component';
 
 interface NavItem {
   path: string;
@@ -41,6 +42,7 @@ interface Breadcrumb {
     MatSidenavModule, MatToolbarModule, MatListModule,
     MatIconModule, MatButtonModule, MatTooltipModule, MatDividerModule, MatMenuModule, MatChipsModule,
     ThemeSwitcherComponent,
+    AvatarMenuComponent,
   ],
   template: `
     <mat-sidenav-container class="omni-container">
@@ -139,39 +141,7 @@ interface Breadcrumb {
           
           <omni-theme-switcher />
           
-          @if (currentUser$ | async; as currentUser) {
-            <!-- User Menu -->
-            <button mat-button [matMenuTriggerFor]="userMenu" class="user-menu-button">
-              <mat-icon>account_circle</mat-icon>
-              <span class="user-name">{{ currentUser.display_name }}</span>
-              <mat-icon class="dropdown-icon">arrow_drop_down</mat-icon>
-            </button>
-            <mat-menu #userMenu="matMenu" class="user-menu">
-              <div class="user-info" mat-menu-item disabled>
-                <div class="user-email">{{ currentUser.email }}</div>
-                <div class="user-tenant">Tenant: {{ currentUser.tenant_id.substring(0, 8) }}...</div>
-              </div>
-              <mat-divider></mat-divider>
-              <button mat-menu-item (click)="navigateToProfile()">
-                <mat-icon>person</mat-icon>
-                <span>My Profile</span>
-              </button>
-              <button mat-menu-item (click)="navigateToSettings()">
-                <mat-icon>settings</mat-icon>
-                <span>Account Settings</span>
-              </button>
-              <mat-divider></mat-divider>
-              <button mat-menu-item (click)="logout()">
-                <mat-icon>logout</mat-icon>
-                <span>Sign Out</span>
-              </button>
-            </mat-menu>
-          } @else {
-            <button mat-raised-button color="accent" (click)="login()">
-              <mat-icon>login</mat-icon>
-              Sign In
-            </button>
-          }
+          <omni-avatar-menu />
           
           <button mat-icon-button matTooltip="Settings (coming soon)" aria-label="Settings">
             <mat-icon>settings</mat-icon>
@@ -444,6 +414,8 @@ export class AppComponent {
     timeline: 'Timeline',
     profile: 'Profile',
     settings: 'Settings',
+    me: 'My Workspace',
+    activity: 'Activity',
   };
   
   // Auth observables
@@ -530,11 +502,11 @@ export class AppComponent {
   }
   
   navigateToProfile(): void {
-    this.router.navigate(['/profile']);
+    this.router.navigate(['/me']);
   }
   
   navigateToSettings(): void {
-    this.router.navigate(['/settings']);
+    this.router.navigate(['/me/settings']);
   }
   
   switchRole(role: 'sc-acct-mgr' | 'sc-mgr' | 'sc-user'): void {

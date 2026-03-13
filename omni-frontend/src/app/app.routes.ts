@@ -1,8 +1,10 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { MY_WORKSPACE_ROUTES } from './features/my-workspace/routes/workspace.routes';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'dashboard/user', pathMatch: 'full' },
+  ...MY_WORKSPACE_ROUTES,
   
   // Dashboard routes (protected)
   {
