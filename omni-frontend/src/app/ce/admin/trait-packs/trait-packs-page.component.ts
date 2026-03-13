@@ -34,6 +34,7 @@ import { TraitPackEditorComponent } from './trait-pack-editor.component';
       <mat-drawer-content>
         <trait-pack-list
           [items]="packs()"
+          [schemas]="schemas()"
           [loading]="loading()"
           [selectedId]="selected()?.id"
           (selected)="onSelect($event)"
