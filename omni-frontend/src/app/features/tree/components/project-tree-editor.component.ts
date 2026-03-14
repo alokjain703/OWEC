@@ -571,6 +571,9 @@ export class ProjectTreeEditorComponent implements OnInit {
   private api = inject(OmniApiService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+
+  /** Ensures stats backfill runs only once per project load session */
+  private _statsBackfilled = false;
   private authState = inject(AuthStateService);
   private schemaLoader = inject(SchemaLoaderService);
   private treeService = inject(TreeService);
@@ -680,6 +683,20 @@ export class ProjectTreeEditorComponent implements OnInit {
       if (nodes && nodes.length > 0 && !this.activeSchema() && this.project()?.active_schema_id) {
         console.log('Nodes exist but schema not loaded. Loading schema...');
         await this.loadActiveSchema(this.project()!.active_schema_id!);
+      }
+
+      // Backfill metadata.stats once per session for existing nodes that lack them
+      if (!this._statsBackfilled && nodes && nodes.length > 0) {
+        this._statsBackfilled = true;
+        this.api.backfillProjectStats(this.projectId()).subscribe({
+          next: async (r) => {
+            if (r.updated > 0) {
+              console.log(`Stats backfilled for ${r.updated} node(s). Reloading tree…`);
+              await this.loadNodes();
+            }
+          },
+          error: (e) => console.warn('Stats backfill failed (non-critical):', e),
+        });
       }
     } catch (err: any) {
       console.error('Failed to load nodes:', err);

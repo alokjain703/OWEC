@@ -130,4 +130,12 @@ export class OmniApiService {
   validateMetadata(projectId: string, payload: unknown): Observable<unknown> {
     return this.http.post(`${this.base}/schemas/project/${projectId}/validate`, payload);
   }
+
+  // ── Stats ────────────────────────────────────────────────────────────────
+  /** Backfill metadata.stats for existing nodes that lack them. Idempotent. */
+  backfillProjectStats(projectId: string): Observable<{ updated: number; project_id: string }> {
+    return this.http.post<{ updated: number; project_id: string }>(
+      `${this.base}/tree/projects/${projectId}/backfill-stats`, {}
+    );
+  }
 }

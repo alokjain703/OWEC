@@ -98,6 +98,18 @@ export interface NodeDroppedEvent {
 }
 
 /**
+ * System-computed content analytics stored in metadata.stats.
+ * Read-only in the UI — never user-editable.
+ */
+export interface NodeStats {
+  word_count: number;
+  char_count: number;
+  sentence_count: number;
+  paragraph_count: number;
+  reading_time_minutes: number;
+}
+
+/**
  * Backend node structure returned from the OMNI API.
  * Mirrors the Python NodeOut schema.
  */
@@ -114,7 +126,13 @@ export interface BackendNode {
   content_format: string; // 'html' | 'markdown' | 'json' | 'plain'
   path?: string;          // hierarchical path e.g. "parentUUID/childUUID"
   has_children: boolean;  // true if this node has children (for lazy loading)
-  metadata: Record<string, unknown>;
+  metadata: {
+    /** System-computed — read-only, never user-editable. */
+    stats?: NodeStats;
+    /** Optional user-set writing goal in words. */
+    target_word_count?: number;
+    [key: string]: unknown;
+  };
   created_at: string;
   updated_at: string;
   // Children are populated by the API when returning a hierarchical tree

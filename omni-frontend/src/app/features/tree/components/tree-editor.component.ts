@@ -19,6 +19,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import {
   BackendNode,
+  NodeStats,
   TreeNode,
   NodeCreatedEvent,
   NodeDeletedEvent,
@@ -140,11 +141,19 @@ import {
                      #labelInput>
             </mat-form-field>
           } @else {
-            <span class="node-label"
-                  [title]="node.label"
-                  (dblclick)="startRename(node); $event.stopPropagation()">
-              {{ node.label }}
-            </span>
+            <div class="node-label-wrapper"
+                 [title]="node.label"
+                 (dblclick)="startRename(node); $event.stopPropagation()">
+              <span class="node-label">{{ node.label }}</span>
+              @if (getWordCount(node) > 0 || getTargetWords(node) !== null) {
+                <span class="node-stats">
+                  {{ getWordCount(node) | number }}
+                  @if (getTargetWords(node); as target) {
+                    / {{ target | number }}
+                  }
+                </span>
+              }
+            </div>
           }
 
           <!-- Actions menu button -->
@@ -354,14 +363,35 @@ import {
     }
 
     /* ── Labels ──────────────────────────────────────────────────────────── */
-    .node-label {
+    .node-label-wrapper {
       flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      user-select: none;
+    }
+
+    .node-label {
       font-size: 14px;
       line-height: 1.4;
-      user-select: none;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .node-stats {
+      font-size: 11px;
+      color: rgba(0, 0, 0, 0.42);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.2;
+    }
+
+    .node-row.selected .node-stats {
+      color: rgba(63, 81, 181, 0.65);
     }
 
     .node-label-input {
@@ -487,6 +517,28 @@ export class TreeEditorComponent {
   sortedChildren(node: TreeNode): TreeNode[] {
     if (!node.children) return [];
     return [...node.children].sort((a, b) => this._orderKey(a) - this._orderKey(b));
+  }
+
+  // ── Stats helpers (read-only; data flows from metadata.stats) ────────────
+
+  private _backendOf(node: TreeNode): BackendNode | undefined {
+    return node.data as BackendNode | undefined;
+  }
+
+  getWordCount(node: TreeNode): number {
+    return this._backendOf(node)?.metadata?.stats?.word_count ?? 0;
+  }
+
+  getTargetWords(node: TreeNode): number | null {
+    const t = this._backendOf(node)?.metadata?.target_word_count;
+    return typeof t === 'number' ? t : null;
+  }
+
+  getProgress(node: TreeNode): number | null {
+    const wc = this.getWordCount(node);
+    const target = this.getTargetWords(node);
+    if (!target) return null;
+    return Math.min(100, Math.round((wc / target) * 100));
   }
 
   // ── Selection ────────────────────────────────────────────────────────────

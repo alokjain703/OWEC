@@ -3,12 +3,15 @@ Tree Service – recursive CTE subtree queries and tree mutations.
 """
 from __future__ import annotations
 
+import math
+import re
 import uuid
 from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.models.node import Node
 from app.schemas.node import (
@@ -31,6 +34,50 @@ def generate_order_key(
     if nxt is not None:
         return float(Decimal(str(nxt)) / 2)
     return 100.0
+
+
+# ── Content stats helpers ─────────────────────────────────────────────────
+
+_RE_HTML_TAG = re.compile(r"<[^>]+>")
+
+
+def default_stats() -> dict:
+    """Zero-filled stats object used as the default when no content exists."""
+    return {"word_count": 0, "char_count": 0, "sentence_count": 0,
+            "paragraph_count": 0, "reading_time_minutes": 0}
+
+
+def calculate_text_stats(content: str | None) -> dict:
+    """
+    Compute stats from raw node content (HTML tags stripped before counting).
+    stats_behavior == 'generate': leaf nodes call this directly.
+    Reading speed: 200 wpm  →  reading_time_minutes = ceil(word_count / 200)
+    """
+    if not content:
+        return default_stats()
+    plain = _RE_HTML_TAG.sub(" ", content) if "<" in content else content
+    plain = plain.strip()
+    if not plain:
+        return default_stats()
+    words = [w for w in re.split(r"\s+", plain) if w]
+    sentences = [s for s in re.split(r"[.!?]+", plain) if s.strip()]
+    paragraphs = [p for p in re.split(r"\n\s*\n", plain) if p.strip()]
+    wc = len(words)
+    return {
+        "word_count": wc,
+        "char_count": len(plain),
+        "sentence_count": len(sentences),
+        "paragraph_count": max(len(paragraphs), 1),
+        "reading_time_minutes": math.ceil(wc / 200) if wc > 0 else 0,
+    }
+
+
+def _set_stats(meta: dict | None, stats: dict) -> dict:
+    """Return a copy of *meta* with the ``stats`` key set to *stats*.
+    Users must never be able to overwrite system-computed stats."""
+    result = dict(meta or {})
+    result["stats"] = stats
+    return result
 
 
 class TreeService:
@@ -65,7 +112,7 @@ class TreeService:
             title=data.title,
             content=data.content,
             content_format=data.content_format,
-            metadata_=data.metadata,
+            metadata_=_set_stats(data.metadata, calculate_text_stats(data.content)),
         )
         self.db.add(node)
         await self.db.flush()
@@ -75,11 +122,13 @@ class TreeService:
         node.path = f"{parent_path}/{node.id}" if parent_path else str(node.id)
         await self.db.flush()
 
-        # Mark parent as having children
+        # Mark parent as having children and propagate stats up the ancestor chain
         if data.parent_id:
             await self.db.execute(
                 update(Node).where(Node.id == data.parent_id).values(has_children=True)
             )
+            await self.db.flush()
+            await self._aggregate_stats_to_root(data.parent_id)
 
         await self.db.refresh(node)
         return node
@@ -87,16 +136,29 @@ class TreeService:
     # ─── Update ────────────────────────────────────────────────────────────────
     async def update_node(self, node_id: uuid.UUID, data: NodeUpdate) -> Node:
         node = await self._get_or_404(node_id)
+        content_changed = False
         if data.title is not None:
             node.title = data.title
         if data.content is not None:
             node.content = data.content
+            content_changed = True
         if data.content_format is not None:
             node.content_format = data.content_format
         if data.metadata is not None:
-            node.metadata_ = data.metadata
+            # Preserve system-computed stats; user must not overwrite them
+            current_stats = (node.metadata_ or {}).get("stats", default_stats())
+            merged = dict(data.metadata)
+            merged["stats"] = current_stats
+            node.metadata_ = merged
+            flag_modified(node, "metadata_")
+        if content_changed:
+            node.metadata_ = _set_stats(node.metadata_, calculate_text_stats(node.content))
+            flag_modified(node, "metadata_")
         await self.db.flush()
         await self.db.refresh(node)
+        if content_changed and node.parent_id:
+            await self._aggregate_stats_to_root(node.parent_id)
+            await self.db.refresh(node)
         return node
 
     # ─── Move ──────────────────────────────────────────────────────────────────
@@ -140,6 +202,12 @@ class TreeService:
             )
 
         await self.db.refresh(node)
+        # Propagate stats for both affected ancestor chains
+        if old_parent_id:
+            await self._aggregate_stats_to_root(old_parent_id)
+        if move.new_parent_id:
+            await self._aggregate_stats_to_root(move.new_parent_id)
+        await self.db.refresh(node)
         return node
 
     # ─── Delete ────────────────────────────────────────────────────────────────
@@ -148,9 +216,10 @@ class TreeService:
         parent_id = node.parent_id
         await self.db.delete(node)  # CASCADE handles children via FK
         await self.db.flush()
-        # Refresh has_children on the former parent
+        # Refresh has_children and propagate stats up the former parent chain
         if parent_id:
             await self._refresh_has_children(parent_id)
+            await self._aggregate_stats_to_root(parent_id)
 
     # ─── Get subtree (recursive CTE) ──────────────────────────────────────────
     async def get_subtree(self, node_id: uuid.UUID) -> dict[str, Any]:
@@ -200,7 +269,7 @@ class TreeService:
             title=f"{source.title} (copy)" if source.title else "(copy)",
             content=source.content,
             content_format=source.content_format,
-            metadata_=dict(source.metadata_ or {}),
+            metadata_=_set_stats(dict(source.metadata_ or {}), calculate_text_stats(source.content)),
         )
         self.db.add(copy)
         await self.db.flush()
@@ -214,11 +283,12 @@ class TreeService:
             copy.path = str(copy.id)
         await self.db.flush()
 
-        # Mark parent has_children
+        # Mark parent has_children and propagate stats up
         if source.parent_id:
             await self.db.execute(
                 update(Node).where(Node.id == source.parent_id).values(has_children=True)
             )
+            await self._aggregate_stats_to_root(source.parent_id)
 
         await self.db.refresh(copy)
         return copy
@@ -256,7 +326,7 @@ class TreeService:
             title=data.title,
             content=data.content,
             content_format=source.content_format,
-            metadata_={},
+            metadata_={"stats": calculate_text_stats(data.content)},
         )
         self.db.add(new_node)
         await self.db.flush()
@@ -270,11 +340,12 @@ class TreeService:
             new_node.path = str(new_node.id)
         await self.db.flush()
 
-        # Mark parent has_children
+        # Mark parent has_children and propagate stats up
         if source.parent_id:
             await self.db.execute(
                 update(Node).where(Node.id == source.parent_id).values(has_children=True)
             )
+            await self._aggregate_stats_to_root(source.parent_id)
 
         await self.db.refresh(new_node)
         return new_node
@@ -300,18 +371,22 @@ class TreeService:
         if not prev_node:
             raise ValueError("No previous sibling to merge with")
 
-        # Append content
+        # Append content and recompute stats for the merged node
         sep = "\n"
-        merged = ((prev_node.content or "") + sep + (source.content or "")).strip()
-        prev_node.content = merged
+        merged_content = ((prev_node.content or "") + sep + (source.content or "")).strip()
+        prev_node.content = merged_content
+        prev_node.metadata_ = _set_stats(prev_node.metadata_, calculate_text_stats(merged_content))
+        flag_modified(prev_node, "metadata_")
         await self.db.flush()
 
         # Delete source (CASCADE handles its children)
+        parent_id = source.parent_id
         await self.db.delete(source)
         await self.db.flush()
 
-        if source.parent_id:
-            await self._refresh_has_children(source.parent_id)
+        if parent_id:
+            await self._refresh_has_children(parent_id)
+            await self._aggregate_stats_to_root(parent_id)
 
         await self.db.refresh(prev_node)
         return prev_node
@@ -363,6 +438,72 @@ class TreeService:
         await self.db.execute(
             update(Node).where(Node.id == parent_id).values(has_children=has_any)
         )
+
+    # ── Stats aggregation ───────────────────────────────────────────────────
+
+    async def _recalculate_node_stats(self, node_id: uuid.UUID) -> None:
+        """
+        Recalculate metadata.stats for one node:
+        - Leaf (no children) → stats_behavior='generate': compute from own content.
+        - Parent (has children) → stats_behavior='aggregate': sum children's stats.
+        """
+        node = await self.db.get(Node, node_id)
+        if not node:
+            return
+        q = (select(Node).where(Node.parent_id == node_id)
+             .order_by(Node.order_key.asc().nullslast()))
+        result = await self.db.execute(q)
+        children = result.scalars().all()
+
+        if not children:
+            stats = calculate_text_stats(node.content)
+        else:
+            def _s(c: Node, k: str) -> int:
+                return int((c.metadata_ or {}).get("stats", {}).get(k, 0))
+            wc = sum(_s(c, "word_count") for c in children)
+            cc = sum(_s(c, "char_count") for c in children)
+            sc = sum(_s(c, "sentence_count") for c in children)
+            pc = sum(_s(c, "paragraph_count") for c in children)
+            stats = {
+                "word_count": wc,
+                "char_count": cc,
+                "sentence_count": sc,
+                "paragraph_count": pc,
+                "reading_time_minutes": math.ceil(wc / 200) if wc > 0 else 0,
+            }
+
+        node.metadata_ = _set_stats(node.metadata_, stats)
+        flag_modified(node, "metadata_")
+        await self.db.flush()
+
+    async def _aggregate_stats_to_root(self, start_node_id: uuid.UUID) -> None:
+        """Walk from start_node_id up through every ancestor recalculating stats.
+        Only the affected chain is touched — no full-tree recalculation."""
+        current_id: uuid.UUID | None = start_node_id
+        while current_id is not None:
+            await self._recalculate_node_stats(current_id)
+            node = await self.db.get(Node, current_id)
+            current_id = node.parent_id if node else None
+
+    async def backfill_project_stats(self, project_id: uuid.UUID) -> int:
+        """
+        Backfill metadata.stats for nodes in a project that do not have them yet.
+        Processes deepest nodes first so parent aggregation is correct.
+        Returns the count of nodes updated.
+        """
+        q = (select(Node)
+             .where(Node.project_id == project_id)
+             .order_by(Node.depth.desc(), Node.order_key.asc().nullslast()))
+        result = await self.db.execute(q)
+        nodes = result.scalars().all()
+
+        updated = 0
+        for node in nodes:
+            if (node.metadata_ or {}).get("stats"):
+                continue  # already has stats
+            await self._recalculate_node_stats(node.id)
+            updated += 1
+        return updated
 
     async def _update_subtree_paths(
         self, root_id: uuid.UUID, root_path: str

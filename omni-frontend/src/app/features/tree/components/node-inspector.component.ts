@@ -137,6 +137,48 @@ interface MetadataFieldDef {
 
             <mat-divider></mat-divider>
 
+            <!-- Stats Section (read-only, system-computed) -->
+            @if (getStats()) {
+              <div class="stats-section">
+                <h3>
+                  <mat-icon>bar_chart</mat-icon>
+                  Writing Stats
+                </h3>
+                <div class="stats-grid">
+                  <div class="stat-item">
+                    <span class="stat-value">{{ getStats()!.word_count | number }}</span>
+                    <span class="stat-label">words</span>
+                    @if (getTargetWords(); as target) {
+                      <span class="stat-target">/ {{ target | number }} goal</span>
+                    }
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-value">{{ getStats()!.reading_time_minutes }}</span>
+                    <span class="stat-label">min read</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-value">{{ getStats()!.sentence_count | number }}</span>
+                    <span class="stat-label">sentences</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-value">{{ getStats()!.paragraph_count | number }}</span>
+                    <span class="stat-label">paragraphs</span>
+                  </div>
+                </div>
+                @if (getTargetWords(); as target) {
+                  <div class="progress-bar-wrap">
+                    <div class="progress-bar-fill"
+                         [style.width.%]="getProgress()">
+                    </div>
+                  </div>
+                  <div class="progress-label">
+                    {{ getProgress() }}% of {{ target | number }} word goal
+                  </div>
+                }
+              </div>
+              <mat-divider></mat-divider>
+            }
+
             <!-- Metadata Section -->
             <div class="metadata-section">
               <h3>
@@ -368,6 +410,78 @@ interface MetadataFieldDef {
       margin-bottom: 16px;
     }
 
+    .stats-section {
+      margin-top: 16px;
+      margin-bottom: 8px;
+    }
+
+    .stats-section h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      margin: 0 0 10px 0;
+      color: rgba(0, 0, 0, 0.87);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .stat-item {
+      background: #f5f5f5;
+      border-radius: 6px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: rgba(0, 0, 0, 0.87);
+      line-height: 1.2;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: rgba(0, 0, 0, 0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .stat-target {
+      font-size: 11px;
+      color: #3f51b5;
+    }
+
+    .progress-bar-wrap {
+      height: 6px;
+      background: #e0e0e0;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3f51b5, #7986cb);
+      border-radius: 3px;
+      transition: width 0.4s ease;
+      max-width: 100%;
+    }
+
+    .progress-label {
+      font-size: 11px;
+      color: rgba(0, 0, 0, 0.54);
+      text-align: right;
+    }
+
     .metadata-section h3,
     .node-info h3 {
       display: flex;
@@ -463,6 +577,24 @@ export class NodeInspectorComponent {
 
   // Derived backend node
   backendNode = computed(() => this.node()?.data as BackendNode | undefined);
+
+  // ─ Stats helpers (read-only; no user editing) ─────────────────────────
+
+  getStats() {
+    return this.backendNode()?.metadata?.stats ?? null;
+  }
+
+  getTargetWords(): number | null {
+    const t = this.backendNode()?.metadata?.target_word_count;
+    return typeof t === 'number' ? t : null;
+  }
+
+  getProgress(): number {
+    const wc  = this.getStats()?.word_count ?? 0;
+    const tgt = this.getTargetWords();
+    if (!tgt) return 0;
+    return Math.min(100, Math.round((wc / tgt) * 100));
+  }
 
   // Editable fields
   editableTitle         = '';

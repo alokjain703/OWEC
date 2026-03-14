@@ -123,3 +123,14 @@ async def merge_node(
         return await svc.merge_node(node_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/projects/{project_id}/backfill-stats",
+             summary="Backfill metadata.stats for all nodes in a project that lack them")
+async def backfill_project_stats(
+    project_id: uuid.UUID,
+    svc: TreeService = Depends(get_service),
+) -> dict:
+    """One-time / idempotent call to populate metadata.stats for existing nodes."""
+    updated = await svc.backfill_project_stats(project_id)
+    return {"updated": updated, "project_id": str(project_id)}

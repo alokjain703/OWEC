@@ -258,6 +258,22 @@ interface Node {
                   <span class="info-value">{{ formatDate(node!.updated_at) }}</span>
                 </div>
               }
+
+              <!-- Stats (read-only, system-computed) -->
+              @if (getStats()) {
+                <div class="stats-row">
+                  <mat-icon class="stats-icon">bar_chart</mat-icon>
+                  <span class="stats-text">
+                    <strong>{{ getStats()!.word_count | number }}</strong> words
+                    @if (getTargetWords(); as tgt) {
+                      / {{ tgt | number }} goal &nbsp;•&nbsp;
+                      {{ getProgress() }}%
+                    }
+                    &nbsp;•&nbsp;
+                    {{ getStats()!.reading_time_minutes }} min read
+                  </span>
+                </div>
+              }
             }
           </div>
 
@@ -467,6 +483,24 @@ export class NodeEditorComponent implements OnInit, OnChanges {
 
   allowedRoles: string[] = [];
   metadataFields: Array<{ name: string; definition: MetadataFieldDefinition }> = [];
+
+  // ─ Stats helpers (read-only; sourced from node.metadata.stats) ─────────
+
+  getStats() {
+    return (this.node as any)?.metadata?.stats ?? null;
+  }
+
+  getTargetWords(): number | null {
+    const t = (this.node as any)?.metadata?.target_word_count;
+    return typeof t === 'number' ? t : null;
+  }
+
+  getProgress(): number {
+    const wc  = this.getStats()?.word_count ?? 0;
+    const tgt = this.getTargetWords();
+    if (!tgt) return 0;
+    return Math.min(100, Math.round((wc / tgt) * 100));
+  }
   nodeInfoExpanded = false;
 
   constructor(private cdr: ChangeDetectorRef) {}
