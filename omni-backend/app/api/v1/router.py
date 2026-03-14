@@ -8,6 +8,7 @@ from app.modules.timeline.router import router as timeline_router
 from app.modules.graph.router import router as graph_router
 from app.modules.schemas.router import router as schemas_router
 from app.modules.ce.router import router as ce_router
+from app.modules.document_to_nodes.router import router as doc_import_router
 from app.api.v1.workspaces import router as workspaces_router
 
 api_router = APIRouter()
@@ -19,3 +20,4 @@ api_router.include_router(timeline_router)
 api_router.include_router(graph_router)
 api_router.include_router(schemas_router)
 api_router.include_router(ce_router)
+api_router.include_router(doc_import_router)

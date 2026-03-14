@@ -32,6 +32,7 @@ import {
   NodeSplitEvent,
   NodeMergeEvent,
   NodeDroppedEvent,
+  NodeImportFromDocumentEvent,
 } from '../models/tree-node.model';
 
 /**
@@ -214,6 +215,14 @@ import {
               <button mat-menu-item class="danger-item" (click)="deleteNode(node)">
                 <mat-icon>delete</mat-icon>
                 <span>Delete  <span class="kbd">Del</span></span>
+              </button>
+
+              <mat-divider></mat-divider>
+
+              <!-- Import -->
+              <button mat-menu-item (click)="importFromDocument(node)">
+                <mat-icon>upload_file</mat-icon>
+                <span>Add Nodes From Document</span>
               </button>
             </mat-menu>
           </div>
@@ -485,6 +494,7 @@ export class TreeEditorComponent {
   nodeSplit          = output<NodeSplitEvent>();
   nodeMerge          = output<NodeMergeEvent>();
   nodeDropped        = output<NodeDroppedEvent>();
+  nodeImportFromDocument = output<NodeImportFromDocumentEvent>();
 
   // ── Local state ─────────────────────────────────────────────────────────
   selectedNodeId = signal<string | null>(null);
@@ -613,6 +623,10 @@ export class TreeEditorComponent {
 
   merge(node: TreeNode): void {
     this.nodeMerge.emit({ node });
+  }
+
+  importFromDocument(node: TreeNode): void {
+    this.nodeImportFromDocument.emit({ node });
   }
 
   deleteNode(node: TreeNode): void {

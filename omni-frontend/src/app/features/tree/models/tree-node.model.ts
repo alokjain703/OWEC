@@ -88,6 +88,13 @@ export interface NodeMergeEvent {
 }
 
 /**
+ * Event emitted when "Add Nodes From Document" is selected from the context menu.
+ */
+export interface NodeImportFromDocumentEvent {
+  node: TreeNode;  // The node that will become the parent of the imported nodes
+}
+
+/**
  * Event emitted when a node is dropped via drag-and-drop.
  * position: 'above' | 'inside' | 'below' relative to targetNode.
  */

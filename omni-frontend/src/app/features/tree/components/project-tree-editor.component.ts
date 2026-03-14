@@ -43,7 +43,13 @@ import {
   NodeSplitEvent,
   NodeMergeEvent,
   NodeDroppedEvent,
+  NodeImportFromDocumentEvent,
 } from '../models/tree-node.model';
+import {
+  DocumentToNodesConverterComponent,
+  DocumentToNodesDialogData,
+  DocumentToNodesDialogResult,
+} from '../../document-to-nodes/document-to-nodes-converter.component';
 
 interface Project {
   id: string;
@@ -240,7 +246,8 @@ interface Schema {
                 (nodeMoveRequested)="handleMoveRequested($event)"
                 (nodeSplit)="handleSplit($event)"
                 (nodeMerge)="handleMerge($event)"
-                (nodeDropped)="handleNodeDropped($event)">
+                (nodeDropped)="handleNodeDropped($event)"
+                (nodeImportFromDocument)="handleImportFromDocument($event)">
               </omni-tree-editor>
             }
           </mat-sidenav>
@@ -1006,6 +1013,42 @@ export class ProjectTreeEditorComponent implements OnInit {
   private _flattenBackend(node: BackendNode): BackendNode[] {
     return [node, ...(node.children ?? []).flatMap(c => this._flattenBackend(c))];
   }
+
+  // ─── Document Import ─────────────────────────────────────────────────────────
+
+  handleImportFromDocument(event: NodeImportFromDocumentEvent): void {
+    const backendNode = this.findBackendNode(event.node.id);
+    if (!backendNode) {
+      this.snackBar.open('Node not found', 'Close', { duration: 2000 });
+      return;
+    }
+
+    const data: DocumentToNodesDialogData = {
+      targetNodeId:     backendNode.id,
+      projectId:        this.projectId(),
+      schemaDefinition: this.activeSchema()?.definition,
+    };
+
+    const ref = this.dialog.open(DocumentToNodesConverterComponent, {
+      data,
+      width: '720px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      disableClose: false,
+      panelClass: 'document-import-dialog',
+    });
+
+    ref.afterClosed().subscribe(async (result: DocumentToNodesDialogResult | null) => {
+      if (result && result.created > 0) {
+        this.snackBar.open(
+          `Imported ${result.created} node(s) from document`,
+          'Close',
+          { duration: 3000 },
+        );
+        await this.loadNodes();
+      }
+    });
+}
 
   // ─── Inspector Panel Event Handlers ─────────────────────────────────────────
 

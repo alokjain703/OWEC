@@ -54,11 +54,18 @@ export class OmniJsonEditorComponent implements AfterViewInit, OnChanges, OnDest
       search: true,
       navigationBar: true,
       statusBar: true,
-      onChangeJSON: (json: unknown) => {
-        if (this.schema) {
-          this.validateJson(json);
+      // onChange works for ALL modes (tree, form, view, code, text).
+      // onChangeJSON only works for tree/form/view and emits the warning in code mode.
+      onChange: () => {
+        try {
+          const json = this.editor.get();
+          if (this.schema) {
+            this.validateJson(json);
+          }
+          this.dataChange.emit(json);
+        } catch {
+          // Invalid JSON while typing in code/text mode — don't emit
         }
-        this.dataChange.emit(json);
       },
     };
 
