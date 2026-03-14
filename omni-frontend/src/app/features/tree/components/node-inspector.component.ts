@@ -6,6 +6,7 @@ import {
   input,
   signal,
   computed,
+  effect,
   inject,
   ChangeDetectionStrategy,
 } from '@angular/core';
@@ -21,6 +22,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TreeNode } from '../models/tree-node.model';
 import { OmniApiService } from '../../../core/services/omni-api.service';
+import { OmniJsonEditorComponent } from '../../../shared/omni-json-editor/omni-json-editor.component';
 
 interface BackendNode {
   id: string;
@@ -34,12 +36,6 @@ interface BackendNode {
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
-}
-
-interface MetadataField {
-  name: string;
-  type: string;
-  label?: string;
 }
 
 /**
@@ -62,6 +58,7 @@ interface MetadataField {
     MatDividerModule,
     MatSelectModule,
     MatSnackBarModule,
+    OmniJsonEditorComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -116,32 +113,17 @@ interface MetadataField {
 
             <!-- Metadata Section -->
             <div class="metadata-section">
-              <h3>
+              <h3 class="collapsible-header" (click)="metadataExpanded = !metadataExpanded">
                 <mat-icon>data_object</mat-icon>
                 Metadata
+                <mat-icon class="collapse-icon">{{ metadataExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
               </h3>
 
-              @if (metadataFields().length > 0) {
-                @for (field of metadataFields(); track field.name) {
-                  <mat-form-field appearance="outline" class="full-width">
-                    <mat-label>{{ formatFieldName(field.name) }}</mat-label>
-                    @if (field.type === 'integer' || field.type === 'number') {
-                      <input 
-                        matInput 
-                        type="number"
-                        [(ngModel)]="editableMetadata[field.name]"
-                        [placeholder]="'Enter ' + formatFieldName(field.name)">
-                    } @else {
-                      <input 
-                        matInput 
-                        [(ngModel)]="editableMetadata[field.name]"
-                        [placeholder]="'Enter ' + formatFieldName(field.name)">
-                    }
-                    <mat-hint>{{ field.type }}</mat-hint>
-                  </mat-form-field>
-                }
-              } @else {
-                <p class="no-metadata">No metadata fields defined</p>
+              @if (metadataExpanded) {
+                <omni-json-editor
+                  [data]="metadataObject"
+                  (dataChange)="onMetadataChange($event)"
+                  mode="tree" />
               }
             </div>
 
@@ -277,6 +259,19 @@ interface MetadataField {
       color: rgba(0, 0, 0, 0.87);
     }
 
+    .collapsible-header {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .collapsible-header:hover {
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    .collapse-icon {
+      margin-left: auto;
+    }
+
     .metadata-section h3 mat-icon,
     .node-info h3 mat-icon {
       font-size: 20px;
@@ -350,36 +345,23 @@ export class NodeInspectorComponent {
     return n?.data as BackendNode | undefined;
   });
 
-  metadataFields = computed((): MetadataField[] => {
-    const backend = this.backendNode();
-    if (!backend?.metadata) return [];
-
-    // Extract field names from existing metadata
-    const fields: MetadataField[] = [];
-    Object.keys(backend.metadata).forEach(key => {
-      const value = backend.metadata[key];
-      let type: string = typeof value;
-      if (type === 'number') {
-        type = Number.isInteger(value) ? 'integer' : 'number';
-      }
-      fields.push({ name: key, type });
-    });
-
-    return fields;
-  });
-
   // Editable state
   editableTitle = '';
   editableContent = '';
   editableMetadata: Record<string, unknown> = {};
+  metadataObject: unknown = {};
+  metadataExpanded = false;
 
   constructor() {
     // Watch for node changes and reset editable values
-    this.node;
-    this.resetChanges();
+    effect(() => {
+      this.node(); // track
+      this.resetChanges();
+    });
   }
 
   ngOnChanges(): void {
+    // kept for non-signal input compatibility
     this.resetChanges();
   }
 
@@ -389,11 +371,17 @@ export class NodeInspectorComponent {
       this.editableTitle = backend.title || '';
       this.editableContent = backend.content || '';
       this.editableMetadata = { ...backend.metadata };
+      this.metadataObject = { ...backend.metadata };
     } else {
       this.editableTitle = '';
       this.editableContent = '';
       this.editableMetadata = {};
+      this.metadataObject = {};
     }
+  }
+
+  onMetadataChange(data: unknown): void {
+    this.editableMetadata = (data as Record<string, unknown>) ?? {};
   }
 
   async saveNode(): Promise<void> {

@@ -5,8 +5,10 @@ import {
   ElementRef,
   EventEmitter,
   Input,
+  OnChanges,
   OnDestroy,
   Output,
+  SimpleChanges,
   ViewChild,
 } from '@angular/core';
 import JSONEditor from 'jsoneditor';
@@ -21,7 +23,7 @@ import Ajv from 'ajv';
   styleUrl: './omni-json-editor.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class OmniJsonEditorComponent implements AfterViewInit, OnDestroy {
+export class OmniJsonEditorComponent implements AfterViewInit, OnChanges, OnDestroy {
   /** Initial JSON object to edit. */
   @Input() data: unknown = {};
 
@@ -66,6 +68,12 @@ export class OmniJsonEditorComponent implements AfterViewInit, OnDestroy {
 
     this.editor = new JSONEditor(this.editorElement.nativeElement, options);
     this.editor.set(this.data);
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['data'] && this.editor) {
+      this.editor.update(this.data);
+    }
   }
 
   /** Returns the current JSON value from the editor. Returns null if the content is invalid. */

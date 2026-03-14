@@ -277,10 +277,7 @@ export class TreeEditorComponent {
   // ─── Add Child Node ─────────────────────────────────────────────────────────
 
   addChild(parentNode: TreeNode): void {
-    const label = prompt('Enter node name:');
-    if (!label) return;
-
-    this.nodeCreated.emit({ parentNode, label });
+    this.nodeCreated.emit({ parentNode, label: '' });
   }
 
   // ─── Rename Node ────────────────────────────────────────────────────────────
