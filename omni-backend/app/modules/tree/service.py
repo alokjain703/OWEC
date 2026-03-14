@@ -11,7 +11,10 @@ from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.node import Node
-from app.schemas.node import NodeCreate, NodeUpdate, NodeMove, NodeReorder
+from app.schemas.node import (
+    NodeCreate, NodeUpdate, NodeMove, NodeReorder,
+    NodeDuplicate, NodeSplit, NodeMerge,
+)
 
 
 # ── Fractional ordering helper ─────────────────────────────────────────────────
@@ -46,8 +49,11 @@ class TreeService:
             depth = parent.depth + 1
             parent_path = parent.path
 
-        # Position at end of siblings
-        order_key = await self._append_order_key(data.project_id, data.parent_id)
+        # Position: use explicit key if provided, otherwise append at end
+        if data.order_key is not None:
+            order_key = data.order_key
+        else:
+            order_key = await self._append_order_key(data.project_id, data.parent_id)
 
         node = Node(
             project_id=data.project_id,
@@ -161,6 +167,155 @@ class TreeService:
         rows = result.mappings().all()
         return self._build_tree(rows)
 
+    # ─── Duplicate ─────────────────────────────────────────────────────────────
+    async def duplicate_node(self, node_id: uuid.UUID, data: NodeDuplicate) -> Node:
+        """Copy a node (and optionally its full subtree) as an immediate next sibling."""
+        source = await self._get_or_404(node_id)
+
+        # Place the copy right after the source
+        next_q = (
+            select(Node.order_key)
+            .where(
+                Node.project_id == source.project_id,
+                Node.parent_id == source.parent_id,
+                Node.order_key > (source.order_key or 0),
+            )
+            .order_by(Node.order_key.asc().nullslast())
+            .limit(1)
+        )
+        result = await self.db.execute(next_q)
+        next_key = result.scalar_one_or_none()
+        new_key = generate_order_key(
+            float(source.order_key or 0),
+            float(next_key) if next_key is not None else None,
+        )
+
+        copy = Node(
+            project_id=source.project_id,
+            parent_id=source.parent_id,
+            depth=source.depth,
+            order_index=0,
+            order_key=new_key,
+            node_role=source.node_role,
+            title=f"{source.title} (copy)" if source.title else "(copy)",
+            content=source.content,
+            content_format=source.content_format,
+            metadata_=dict(source.metadata_ or {}),
+        )
+        self.db.add(copy)
+        await self.db.flush()
+        await self.db.refresh(copy)
+
+        # Build path
+        if source.parent_id:
+            parent = await self.db.get(Node, source.parent_id)
+            copy.path = f"{parent.path}/{copy.id}" if parent else str(copy.id)
+        else:
+            copy.path = str(copy.id)
+        await self.db.flush()
+
+        # Mark parent has_children
+        if source.parent_id:
+            await self.db.execute(
+                update(Node).where(Node.id == source.parent_id).values(has_children=True)
+            )
+
+        await self.db.refresh(copy)
+        return copy
+
+    # ─── Split (insert sibling below) ─────────────────────────────────────────
+    async def split_node(self, node_id: uuid.UUID, data: NodeSplit) -> Node:
+        """Create a new sibling node immediately below the given node."""
+        source = await self._get_or_404(node_id)
+
+        # Find the next sibling to compute a midpoint key
+        next_q = (
+            select(Node.order_key)
+            .where(
+                Node.project_id == source.project_id,
+                Node.parent_id == source.parent_id,
+                Node.order_key > (source.order_key or 0),
+            )
+            .order_by(Node.order_key.asc().nullslast())
+            .limit(1)
+        )
+        result = await self.db.execute(next_q)
+        next_key = result.scalar_one_or_none()
+        new_key = generate_order_key(
+            float(source.order_key or 0),
+            float(next_key) if next_key is not None else None,
+        )
+
+        new_node = Node(
+            project_id=source.project_id,
+            parent_id=source.parent_id,
+            depth=source.depth,
+            order_index=0,
+            order_key=new_key,
+            node_role=data.node_role or source.node_role,
+            title=data.title,
+            content=data.content,
+            content_format=source.content_format,
+            metadata_={},
+        )
+        self.db.add(new_node)
+        await self.db.flush()
+        await self.db.refresh(new_node)
+
+        # Build path
+        if source.parent_id:
+            parent = await self.db.get(Node, source.parent_id)
+            new_node.path = f"{parent.path}/{new_node.id}" if parent else str(new_node.id)
+        else:
+            new_node.path = str(new_node.id)
+        await self.db.flush()
+
+        # Mark parent has_children
+        if source.parent_id:
+            await self.db.execute(
+                update(Node).where(Node.id == source.parent_id).values(has_children=True)
+            )
+
+        await self.db.refresh(new_node)
+        return new_node
+
+    # ─── Merge ─────────────────────────────────────────────────────────────────
+    async def merge_node(self, node_id: uuid.UUID) -> Node:
+        """Merge this node into its previous sibling (append content, delete this node)."""
+        source = await self._get_or_404(node_id)
+
+        prev_q = (
+            select(Node)
+            .where(
+                Node.project_id == source.project_id,
+                Node.parent_id == source.parent_id,
+                Node.order_key < (source.order_key or 0),
+            )
+            .order_by(Node.order_key.desc().nullslast())
+            .limit(1)
+        )
+        result = await self.db.execute(prev_q)
+        prev_node = result.scalar_one_or_none()
+
+        if not prev_node:
+            raise ValueError("No previous sibling to merge with")
+
+        # Append content
+        sep = "\n"
+        merged = ((prev_node.content or "") + sep + (source.content or "")).strip()
+        prev_node.content = merged
+        await self.db.flush()
+
+        # Delete source (CASCADE handles its children)
+        await self.db.delete(source)
+        await self.db.flush()
+
+        if source.parent_id:
+            await self._refresh_has_children(source.parent_id)
+
+        await self.db.refresh(prev_node)
+        return prev_node
+
     # ─── Reorder siblings ──────────────────────────────────────────────────────
     async def reorder_nodes(self, reorder: NodeReorder) -> list[Node]:
         """Assign evenly-spaced fractional order_keys to the supplied sibling list."""
@@ -216,7 +371,7 @@ class TreeService:
         await self.db.execute(
             text("""
                 WITH RECURSIVE sub AS (
-                    SELECT id, parent_id, :root_path::text AS path
+                    SELECT id, parent_id, CAST(:root_path AS TEXT) AS path
                     FROM nodes WHERE id = :root_id
 
                     UNION ALL

@@ -24,16 +24,25 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { OmniApiService } from '../../../core/services/omni-api.service';
 import { AuthStateService } from '../../../core/services/auth-state.service';
 import { SchemaLoaderService, SchemaOption } from '../services/schema-loader.service';
+import { TreeService } from '../services/tree.service';
 import { TreeEditorComponent } from './tree-editor.component';
 import { NodeInspectorComponent } from './node-inspector.component';
 import { NodeContentEditorComponent } from './node-content-editor.component';
 import { NodeEditorComponent } from './node-editor.component';
 import { ProjectEditorComponent } from './project-editor.component';
 import {
+  BackendNode,
   TreeNode,
   NodeCreatedEvent,
   NodeDeletedEvent,
   NodeRenamedEvent,
+  NodeInsertAboveEvent,
+  NodeInsertBelowEvent,
+  NodeDuplicateEvent,
+  NodeMoveRequestedEvent,
+  NodeSplitEvent,
+  NodeMergeEvent,
+  NodeDroppedEvent,
 } from '../models/tree-node.model';
 
 interface Project {
@@ -44,21 +53,6 @@ interface Project {
   schema_version_id?: string;
   created_at: string;
   updated_at: string;
-}
-
-interface BackendNode {
-  id: string;
-  project_id: string;
-  parent_id?: string;
-  depth: number;
-  order_index: number;
-  node_role: string;
-  title?: string;
-  content?: string;
-  metadata: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-  children?: BackendNode[];
 }
 
 interface Schema {
@@ -239,7 +233,14 @@ interface Schema {
                 (nodeSelected)="handleNodeSelected($event)"
                 (nodeCreated)="handleNodeCreated($event)"
                 (nodeDeleted)="handleNodeDeleted($event)"
-                (nodeRenamed)="handleNodeRenamed($event)">
+                (nodeRenamed)="handleNodeRenamed($event)"
+                (nodeInsertAbove)="handleInsertAbove($event)"
+                (nodeInsertBelow)="handleInsertBelow($event)"
+                (nodeDuplicate)="handleDuplicate($event)"
+                (nodeMoveRequested)="handleMoveRequested($event)"
+                (nodeSplit)="handleSplit($event)"
+                (nodeMerge)="handleMerge($event)"
+                (nodeDropped)="handleNodeDropped($event)">
               </omni-tree-editor>
             }
           </mat-sidenav>
@@ -571,6 +572,7 @@ export class ProjectTreeEditorComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
   private authState = inject(AuthStateService);
   private schemaLoader = inject(SchemaLoaderService);
+  private treeService = inject(TreeService);
 
   // Inputs
   projectId = input.required<string>();
@@ -856,6 +858,131 @@ export class ProjectTreeEditorComponent implements OnInit {
       console.error('Failed to rename node:', err);
       this.snackBar.open('Failed to rename node', 'Close', { duration: 3000 });
     }
+  }
+
+  // ─── New Tree Operations ─────────────────────────────────────────────────────
+
+  async handleInsertAbove(event: NodeInsertAboveEvent): Promise<void> {
+    const ref = this.findBackendNode(event.referenceNode.id);
+    if (!ref) { this.snackBar.open('Node not found', 'Close', { duration: 2000 }); return; }
+
+    const siblings = this.backendNodes()
+      .flatMap(n => this._flattenBackend(n))
+      .filter(n => n.parent_id === ref.parent_id);
+
+    const nodeRole = ref.node_role || 'scene';
+    try {
+      await this.treeService.insertAbove(ref, siblings, nodeRole, '');
+      this.snackBar.open('Node inserted above', 'Close', { duration: 2000 });
+      await this.loadNodes();
+    } catch (err: any) {
+      console.error('Insert above failed:', err);
+      this.snackBar.open('Failed to insert node', 'Close', { duration: 3000 });
+    }
+  }
+
+  async handleInsertBelow(event: NodeInsertBelowEvent): Promise<void> {
+    const ref = this.findBackendNode(event.referenceNode.id);
+    if (!ref) { this.snackBar.open('Node not found', 'Close', { duration: 2000 }); return; }
+
+    try {
+      await this.treeService.insertBelow(ref, '');
+      this.snackBar.open('Node inserted below', 'Close', { duration: 2000 });
+      await this.loadNodes();
+    } catch (err: any) {
+      console.error('Insert below failed:', err);
+      this.snackBar.open('Failed to insert node', 'Close', { duration: 3000 });
+    }
+  }
+
+  async handleDuplicate(event: NodeDuplicateEvent): Promise<void> {
+    try {
+      await this.treeService.duplicateNode(event.node.id);
+      this.snackBar.open(`Duplicated "${event.node.label}"`, 'Close', { duration: 2000 });
+      await this.loadNodes();
+    } catch (err: any) {
+      console.error('Duplicate failed:', err);
+      this.snackBar.open('Failed to duplicate node', 'Close', { duration: 3000 });
+    }
+  }
+
+  async handleMoveRequested(event: NodeMoveRequestedEvent): Promise<void> {
+    // Simple prompt-based move: ask for target node title and find it
+    const targetTitle = prompt(
+      `Move "${event.node.label}" to:\nEnter the title of the target parent node (leave blank to make root):`
+    );
+    if (targetTitle === null) return; // cancelled
+
+    const allBackend = this.backendNodes()
+      .flatMap(n => this._flattenBackend(n));
+
+    let newParentId: string | null = null;
+    if (targetTitle.trim() !== '') {
+      const target = allBackend.find(n =>
+        n.title?.toLowerCase() === targetTitle.trim().toLowerCase()
+      );
+      if (!target) {
+        this.snackBar.open(`Node "${targetTitle}" not found`, 'Close', { duration: 3000 });
+        return;
+      }
+      newParentId = target.id;
+    }
+
+    try {
+      await this.api.moveNode(event.node.id, { new_parent_id: newParentId }).toPromise();
+      this.snackBar.open(`Moved "${event.node.label}"`, 'Close', { duration: 2000 });
+      await this.loadNodes();
+    } catch (err: any) {
+      console.error('Move failed:', err);
+      this.snackBar.open('Failed to move node', 'Close', { duration: 3000 });
+    }
+  }
+
+  async handleSplit(event: NodeSplitEvent): Promise<void> {
+    const title = prompt(`Split "${event.node.label}" — title for the new node:`) ?? '';
+    try {
+      await this.treeService.splitNode(event.node.id, title);
+      this.snackBar.open('Node split', 'Close', { duration: 2000 });
+      await this.loadNodes();
+    } catch (err: any) {
+      console.error('Split failed:', err);
+      this.snackBar.open('Failed to split node', 'Close', { duration: 3000 });
+    }
+  }
+
+  async handleMerge(event: NodeMergeEvent): Promise<void> {
+    if (!confirm(`Merge "${event.node.label}" with its previous sibling? Their content will be combined.`)) return;
+    try {
+      await this.treeService.mergeNode(event.node.id);
+      this.snackBar.open('Nodes merged', 'Close', { duration: 2000 });
+      this.selectedNode.set(null);
+      await this.loadNodes();
+    } catch (err: any) {
+      console.error('Merge failed:', err);
+      this.snackBar.open(err?.error?.detail ?? 'Failed to merge — ensure a previous sibling exists', 'Close', { duration: 4000 });
+    }
+  }
+
+  async handleNodeDropped(event: NodeDroppedEvent): Promise<void> {
+    const draggedBackend = this.findBackendNode(event.draggedNode.id);
+    const targetBackend  = this.findBackendNode(event.targetNode.id);
+    if (!draggedBackend || !targetBackend) return;
+
+    const allFlat = this.backendNodes().flatMap(n => this._flattenBackend(n));
+
+    try {
+      await this.treeService.moveNode(draggedBackend, targetBackend, event.position, allFlat);
+      this.snackBar.open('Node moved', 'Close', { duration: 1500 });
+      await this.loadNodes();
+    } catch (err: any) {
+      console.error('Drag-drop move failed:', err);
+      this.snackBar.open('Failed to move node', 'Close', { duration: 3000 });
+    }
+  }
+
+  /** Flatten a BackendNode tree into a depth-first list. */
+  private _flattenBackend(node: BackendNode): BackendNode[] {
+    return [node, ...(node.children ?? []).flatMap(c => this._flattenBackend(c))];
   }
 
   // ─── Inspector Panel Event Handlers ─────────────────────────────────────────

@@ -14,6 +14,8 @@ class NodeCreate(BaseModel):
     content: Optional[str] = None
     content_format: str = "html"
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    # Optional explicit ordering — if omitted service appends at end
+    order_key: Optional[float] = None
 
 
 class NodeUpdate(BaseModel):
@@ -56,3 +58,23 @@ class NodeOut(BaseModel):
     updated_at: datetime
     # Don't include children by default to avoid eager loading issues
     # children: List["NodeOut"] = []
+
+
+class NodeDuplicate(BaseModel):
+    """Payload for duplicating a node (and optionally its subtree)."""
+    include_children: bool = False
+
+
+class NodeSplit(BaseModel):
+    """
+    Create a new sibling node immediately after the target node.
+    Used for 'Insert Below' via API, and for the editorial 'Split' action.
+    """
+    title: Optional[str] = None
+    content: Optional[str] = None      # content for the new node (split-off portion)
+    node_role: Optional[str] = None    # defaults to same role as the source node
+
+
+class NodeMerge(BaseModel):
+    """Merge a node into its previous sibling (appends content, deletes this node)."""
+    pass

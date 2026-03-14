@@ -46,6 +46,58 @@ export interface NodeRenamedEvent {
 }
 
 /**
+ * Event emitted when "Insert Above" is requested
+ */
+export interface NodeInsertAboveEvent {
+  referenceNode: TreeNode;
+}
+
+/**
+ * Event emitted when "Insert Below" is requested
+ */
+export interface NodeInsertBelowEvent {
+  referenceNode: TreeNode;
+}
+
+/**
+ * Event emitted when "Duplicate" is requested
+ */
+export interface NodeDuplicateEvent {
+  node: TreeNode;
+}
+
+/**
+ * Event emitted when "Move" is requested from the context menu
+ */
+export interface NodeMoveRequestedEvent {
+  node: TreeNode;
+}
+
+/**
+ * Event emitted when "Split" is requested
+ */
+export interface NodeSplitEvent {
+  node: TreeNode;
+}
+
+/**
+ * Event emitted when "Merge" is requested
+ */
+export interface NodeMergeEvent {
+  node: TreeNode;
+}
+
+/**
+ * Event emitted when a node is dropped via drag-and-drop.
+ * position: 'above' | 'inside' | 'below' relative to targetNode.
+ */
+export interface NodeDroppedEvent {
+  draggedNode: TreeNode;
+  targetNode: TreeNode;
+  position: 'above' | 'inside' | 'below';
+}
+
+/**
  * Backend node structure returned from the OMNI API.
  * Mirrors the Python NodeOut schema.
  */
@@ -65,4 +117,6 @@ export interface BackendNode {
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+  // Children are populated by the API when returning a hierarchical tree
+  children?: BackendNode[];
 }

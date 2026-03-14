@@ -7,7 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.modules.tree.service import TreeService
-from app.schemas.node import NodeCreate, NodeUpdate, NodeMove, NodeReorder, NodeOut
+from app.schemas.node import (
+    NodeCreate, NodeUpdate, NodeMove, NodeReorder, NodeOut,
+    NodeDuplicate, NodeSplit, NodeMerge,
+)
 
 router = APIRouter(prefix="/tree", tags=["Tree"])
 
@@ -82,3 +85,41 @@ async def reorder_nodes(
     svc: TreeService = Depends(get_service),
 ) -> list[NodeOut]:
     return await svc.reorder_nodes(payload)
+
+
+@router.post("/nodes/{node_id}/duplicate", response_model=NodeOut,
+             summary="Duplicate a node as the next sibling")
+async def duplicate_node(
+    node_id: uuid.UUID,
+    payload: NodeDuplicate = NodeDuplicate(),
+    svc: TreeService = Depends(get_service),
+):
+    try:
+        return await svc.duplicate_node(node_id, payload)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/nodes/{node_id}/split", response_model=NodeOut,
+             summary="Insert a new sibling node immediately below this one (split)")
+async def split_node(
+    node_id: uuid.UUID,
+    payload: NodeSplit = NodeSplit(),
+    svc: TreeService = Depends(get_service),
+):
+    try:
+        return await svc.split_node(node_id, payload)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/nodes/{node_id}/merge", response_model=NodeOut,
+             summary="Merge this node into its previous sibling")
+async def merge_node(
+    node_id: uuid.UUID,
+    svc: TreeService = Depends(get_service),
+):
+    try:
+        return await svc.merge_node(node_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

@@ -52,6 +52,15 @@ export class OmniApiService {
   reorderNodes(payload: unknown): Observable<unknown> {
     return this.http.post(`${this.base}/tree/nodes/reorder`, payload);
   }
+  duplicateNode(id: string, payload: { include_children?: boolean } = {}): Observable<unknown> {
+    return this.http.post(`${this.base}/tree/nodes/${id}/duplicate`, payload);
+  }
+  splitNode(id: string, payload: { title?: string; content?: string; node_role?: string } = {}): Observable<unknown> {
+    return this.http.post(`${this.base}/tree/nodes/${id}/split`, payload);
+  }
+  mergeNode(id: string): Observable<unknown> {
+    return this.http.post(`${this.base}/tree/nodes/${id}/merge`, {});
+  }
 
   // ── Entities ────────────────────────────────────────────────────────────────
   createEntity(payload: unknown): Observable<unknown> {
