@@ -275,6 +275,7 @@ interface Schema {
               <!-- Inspector -->
               <omni-node-inspector
                 [node]="selectedNode()"
+                [schema]="activeSchema()?.definition"
                 (nodeSaved)="handleNodeSaved()"
                 (nodeDeleted)="handleInspectorNodeDeleted()"
                 (childNodeRequested)="handleChildNodeRequested($event)">
@@ -452,11 +453,11 @@ interface Schema {
     }
 
     mat-sidenav[position="end"].inspector-panel {
-      width: 350px;
+      width: 525px;
     }
 
     mat-sidenav[position="end"].node-editor-panel {
-      width: 400px;
+      width: 525px;
     }
 
     .content-panel {
@@ -821,6 +822,10 @@ export class ProjectTreeEditorComponent implements OnInit {
   // ─── Node Event Handlers ────────────────────────────────────────────────────
 
   handleNodeSelected(node: TreeNode): void {
+    // Close the create-node editor when selecting a different node
+    if (this.editorOpen() && this.editorMode() === 'create') {
+      this.closeNodeEditor();
+    }
     this.selectedNode.set(node);
     this.nodeSelected.emit(node);
   }

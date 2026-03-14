@@ -21,11 +21,17 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTabsModule } from '@angular/material/tabs';
 import { BackendNode, TreeNode } from '../models/tree-node.model';
 import { OmniApiService } from '../../../core/services/omni-api.service';
 import { OmniJsonEditorComponent } from '../../../shared/omni-json-editor/omni-json-editor.component';
 
-// BackendNode is now imported from tree-node.model (removed local declaration)
+interface MetadataFieldDef {
+  type: 'string' | 'integer' | 'enum' | 'array';
+  required?: boolean;
+  enum?: string[];
+  items?: { type: string };
+}
 
 /**
  * Node Inspector Component
@@ -48,6 +54,7 @@ import { OmniJsonEditorComponent } from '../../../shared/omni-json-editor/omni-j
     MatSelectModule,
     MatSlideToggleModule,
     MatSnackBarModule,
+    MatTabsModule,
     OmniJsonEditorComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -132,18 +139,109 @@ import { OmniJsonEditorComponent } from '../../../shared/omni-json-editor/omni-j
 
             <!-- Metadata Section -->
             <div class="metadata-section">
-              <h3 class="collapsible-header" (click)="metadataExpanded = !metadataExpanded">
+              <h3>
                 <mat-icon>data_object</mat-icon>
                 Metadata
-                <mat-icon class="collapse-icon">{{ metadataExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
               </h3>
 
-              @if (metadataExpanded) {
-                <omni-json-editor
-                  [data]="metadataObject"
-                  (dataChange)="onMetadataChange($event)"
-                  mode="tree" />
-              }
+              <mat-tab-group [(selectedIndex)]="metadataTabIndex" animationDuration="150ms">
+
+                <!-- ── Tab 1: Schema Fields ─────────────────────────────── -->
+                <mat-tab>
+                  <ng-template mat-tab-label>
+                    <mat-icon class="tab-icon">view_list</mat-icon>
+                    Fields
+                  </ng-template>
+
+                  @if (schemaFields().length > 0) {
+                    @for (field of schemaFields(); track field.name) {
+
+                      <!-- String -->
+                      @if (field.def.type === 'string' && !field.def.enum) {
+                        <mat-form-field appearance="outline" class="full-width meta-field">
+                          <mat-label>{{ formatFieldName(field.name) }}</mat-label>
+                          <input matInput
+                                 [ngModel]="editableMetadata[field.name] ?? ''"
+                                 (ngModelChange)="setMetaField(field.name, $event)"
+                                 [placeholder]="'Enter ' + formatFieldName(field.name)"
+                                 [required]="!!field.def.required">
+                          @if (field.def.required) { <mat-hint>Required</mat-hint> }
+                        </mat-form-field>
+                      }
+
+                      <!-- Integer -->
+                      @if (field.def.type === 'integer') {
+                        <mat-form-field appearance="outline" class="full-width meta-field">
+                          <mat-label>{{ formatFieldName(field.name) }}</mat-label>
+                          <input matInput type="number"
+                                 [ngModel]="editableMetadata[field.name] ?? null"
+                                 (ngModelChange)="setMetaField(field.name, $event)"
+                                 [placeholder]="'Enter ' + formatFieldName(field.name)"
+                                 [required]="!!field.def.required">
+                          <mat-icon matPrefix>tag</mat-icon>
+                          @if (field.def.required) { <mat-hint>Required</mat-hint> }
+                        </mat-form-field>
+                      }
+
+                      <!-- Enum (select) -->
+                      @if (field.def.type === 'string' && field.def.enum) {
+                        <mat-form-field appearance="outline" class="full-width meta-field">
+                          <mat-label>{{ formatFieldName(field.name) }}</mat-label>
+                          <mat-select
+                                 [ngModel]="editableMetadata[field.name] ?? null"
+                                 (ngModelChange)="setMetaField(field.name, $event)"
+                                 [required]="!!field.def.required">
+                            <mat-option [value]="null">-- None --</mat-option>
+                            @for (opt of field.def.enum; track opt) {
+                              <mat-option [value]="opt">{{ opt }}</mat-option>
+                            }
+                          </mat-select>
+                          @if (field.def.required) { <mat-hint>Required</mat-hint> }
+                        </mat-form-field>
+                      }
+
+                      <!-- Array (comma-separated) -->
+                      @if (field.def.type === 'array') {
+                        <mat-form-field appearance="outline" class="full-width meta-field">
+                          <mat-label>{{ formatFieldName(field.name) }}</mat-label>
+                          <input matInput
+                                 [value]="getArrayValue(field.name)"
+                                 (blur)="setArrayValue(field.name, $event)"
+                                 placeholder="Comma-separated values"
+                                 [required]="!!field.def.required">
+                          <mat-icon matPrefix>list</mat-icon>
+                          <mat-hint>Separate values with commas</mat-hint>
+                        </mat-form-field>
+                      }
+
+                    }
+                  } @else {
+                    <p class="no-schema-msg">
+                      @if (schema()) {
+                        No metadata fields defined for role <strong>{{ backendNode()?.node_role }}</strong>.
+                      } @else {
+                        No schema loaded — metadata fields unavailable. Switch to Raw JSON to edit.
+                      }
+                    </p>
+                  }
+                </mat-tab>
+
+                <!-- ── Tab 2: Raw JSON ──────────────────────────────────── -->
+                <mat-tab>
+                  <ng-template mat-tab-label>
+                    <mat-icon class="tab-icon">code</mat-icon>
+                    Raw JSON
+                  </ng-template>
+
+                  <div class="json-tab-body">
+                    <omni-json-editor
+                      [data]="metadataObject"
+                      (dataChange)="onMetadataChange($event)"
+                      mode="tree" />
+                  </div>
+                </mat-tab>
+
+              </mat-tab-group>
             </div>
 
             <mat-divider></mat-divider>
@@ -277,34 +375,31 @@ import { OmniJsonEditorComponent } from '../../../shared/omni-json-editor/omni-j
       gap: 8px;
       font-size: 14px;
       font-weight: 500;
-      margin: 0 0 12px 0;
+      margin: 0 0 8px 0;
       color: rgba(0, 0, 0, 0.87);
     }
 
-    .collapsible-header {
-      cursor: pointer;
-      user-select: none;
+    .tab-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      margin-right: 4px;
+      vertical-align: middle;
     }
 
-    .collapsible-header:hover {
-      color: rgba(0, 0, 0, 0.6);
+    .meta-field {
+      margin-top: 8px;
     }
 
-    .collapse-icon {
-      margin-left: auto;
-    }
-
-    .metadata-section h3 mat-icon,
-    .node-info h3 mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-    }
-
-    .no-metadata {
+    .no-schema-msg {
+      font-size: 13px;
       color: rgba(0, 0, 0, 0.54);
-      font-size: 14px;
       font-style: italic;
+      padding: 8px 0;
+    }
+
+    .json-tab-body {
+      padding-top: 8px;
     }
 
     .info-row {
@@ -354,34 +449,47 @@ export class NodeInspectorComponent {
   private snackBar = inject(MatSnackBar);
 
   // Inputs
-  node = input<TreeNode | null>(null);
+  node   = input<TreeNode | null>(null);
+  schema = input<any>(null);  // same schema shape as NodeEditorComponent expects
 
   // Outputs
-  @Output() nodeSaved = new EventEmitter<void>();
-  @Output() nodeDeleted = new EventEmitter<void>();
+  @Output() nodeSaved          = new EventEmitter<void>();
+  @Output() nodeDeleted        = new EventEmitter<void>();
   @Output() childNodeRequested = new EventEmitter<TreeNode>();
 
   // State
-  saving = signal(false);
+  saving   = signal(false);
   deleting = signal(false);
 
-  // Computed
-  backendNode = computed(() => {
-    const n = this.node();
-    return n?.data as BackendNode | undefined;
-  });
+  // Derived backend node
+  backendNode = computed(() => this.node()?.data as BackendNode | undefined);
 
-  // Editable state
-  editableTitle = '';
-  editableContent = '';
+  // Editable fields
+  editableTitle         = '';
+  editableContent       = '';
   editableContentFormat = 'html';
   editableMetadata: Record<string, unknown> = {};
   metadataObject: unknown = {};
-  metadataExpanded = false;
+
+  // Tab index: 0 = Schema Fields, 1 = Raw JSON
+  metadataTabIndex = 0;
   nodeInfoExpanded = false;
 
+  // ── Schema fields computed from schema input + node role ────────────────
+  schemaFields = computed(() => {
+    const s = this.schema();
+    const role = this.backendNode()?.node_role;
+    if (!s || !role) return [];
+    const roleMeta: Record<string, MetadataFieldDef> | undefined =
+      s.metadata_definitions?.[role];
+    if (!roleMeta) return [];
+    return Object.entries(roleMeta).map(([name, def]) => ({
+      name,
+      def: def as MetadataFieldDef,
+    }));
+  });
+
   constructor() {
-    // Watch for node changes and reset editable values
     effect(() => {
       this.node(); // track
       this.resetChanges();
@@ -389,43 +497,69 @@ export class NodeInspectorComponent {
   }
 
   ngOnChanges(): void {
-    // kept for non-signal input compatibility
     this.resetChanges();
   }
 
   resetChanges(): void {
     const backend = this.backendNode();
     if (backend) {
-      this.editableTitle = backend.title || '';
-      this.editableContent = backend.content || '';
-      this.editableContentFormat = backend.content_format || 'html';
-      this.editableMetadata = { ...backend.metadata };
-      this.metadataObject = { ...backend.metadata };
+      this.editableTitle         = backend.title   ?? '';
+      this.editableContent       = backend.content ?? '';
+      this.editableContentFormat = backend.content_format ?? 'html';
+      this.editableMetadata      = { ...(backend.metadata ?? {}) };
+      this.metadataObject        = { ...(backend.metadata ?? {}) };
     } else {
-      this.editableTitle = '';
-      this.editableContent = '';
+      this.editableTitle         = '';
+      this.editableContent       = '';
       this.editableContentFormat = 'html';
-      this.editableMetadata = {};
-      this.metadataObject = {};
+      this.editableMetadata      = {};
+      this.metadataObject        = {};
     }
   }
 
-  onMetadataChange(data: unknown): void {
-    this.editableMetadata = (data as Record<string, unknown>) ?? {};
+  // ── Metadata helpers ────────────────────────────────────────────────────
+
+  /** Called by schema-field inputs to update a single key. */
+  setMetaField(name: string, value: unknown): void {
+    this.editableMetadata = { ...this.editableMetadata, [name]: value };
+    this.metadataObject   = { ...this.editableMetadata };
   }
 
+  /** Display an array field as comma-separated string. */
+  getArrayValue(name: string): string {
+    const v = this.editableMetadata[name];
+    return Array.isArray(v) ? v.join(', ') : '';
+  }
+
+  /** Parse comma-separated string back to array on blur. */
+  setArrayValue(name: string, event: FocusEvent): void {
+    const raw = (event.target as HTMLInputElement).value;
+    const arr = raw
+      ? raw.split(',').map(s => s.trim()).filter(s => s.length > 0)
+      : [];
+    this.setMetaField(name, arr);
+  }
+
+  /** Called by the JSON editor — syncs back to editableMetadata. */
+  onMetadataChange(data: unknown): void {
+    this.editableMetadata = (data as Record<string, unknown>) ?? {};
+    // Don't reassign metadataObject (avoid infinite loop with json editor)
+  }
+
+  // ── Save / Delete ───────────────────────────────────────────────────────
+
   async saveNode(): Promise<void> {
-    const n = this.node();
+    const n       = this.node();
     const backend = this.backendNode();
     if (!n || !backend) return;
 
     this.saving.set(true);
     try {
       await this.api.updateNode(backend.id, {
-        title: this.editableTitle,
-        content: this.editableContent,
+        title:          this.editableTitle,
+        content:        this.editableContent,
         content_format: this.editableContentFormat,
-        metadata: this.editableMetadata,
+        metadata:       this.editableMetadata,
       }).toPromise();
 
       this.snackBar.open('Node saved successfully', 'Close', { duration: 2000 });
@@ -439,12 +573,10 @@ export class NodeInspectorComponent {
   }
 
   async deleteNode(): Promise<void> {
-    const n = this.node();
     const backend = this.backendNode();
-    if (!n || !backend) return;
+    if (!backend) return;
 
-    const confirmMsg = `Delete "${backend.title || 'this node'}"?`;
-    if (!confirm(confirmMsg)) return;
+    if (!confirm(`Delete "${backend.title || 'this node'}"?`)) return;
 
     this.deleting.set(true);
     try {
@@ -461,21 +593,15 @@ export class NodeInspectorComponent {
 
   addChildNode(): void {
     const n = this.node();
-    if (n) {
-      this.childNodeRequested.emit(n);
-    }
+    if (n) this.childNodeRequested.emit(n);
   }
 
   formatFieldName(name: string): string {
-    // Convert snake_case to Title Case
-    return name
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+    return name.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   }
 
   formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    const d = new Date(dateString);
+    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
   }
 }
