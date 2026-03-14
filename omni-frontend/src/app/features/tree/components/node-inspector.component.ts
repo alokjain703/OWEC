@@ -150,25 +150,28 @@ import { OmniJsonEditorComponent } from '../../../shared/omni-json-editor/omni-j
 
             <!-- Node Info -->
             <div class="node-info">
-              <h3>
+              <h3 class="collapsible-header" (click)="nodeInfoExpanded = !nodeInfoExpanded">
                 <mat-icon>info</mat-icon>
                 Node Information
+                <mat-icon class="collapse-icon">{{ nodeInfoExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
               </h3>
-              <div class="info-row">
-                <span class="info-label">ID:</span>
-                <span class="info-value">{{ node()!.id }}</span>
-              </div>
-              @if (backendNode()?.created_at) {
+              @if (nodeInfoExpanded) {
                 <div class="info-row">
-                  <span class="info-label">Created:</span>
-                  <span class="info-value">{{ formatDate(backendNode()!.created_at) }}</span>
+                  <span class="info-label">ID:</span>
+                  <span class="info-value">{{ node()!.id }}</span>
                 </div>
-              }
-              @if (backendNode()?.updated_at) {
-                <div class="info-row">
-                  <span class="info-label">Updated:</span>
-                  <span class="info-value">{{ formatDate(backendNode()!.updated_at) }}</span>
-                </div>
+                @if (backendNode()?.created_at) {
+                  <div class="info-row">
+                    <span class="info-label">Created:</span>
+                    <span class="info-value">{{ formatDate(backendNode()!.created_at) }}</span>
+                  </div>
+                }
+                @if (backendNode()?.updated_at) {
+                  <div class="info-row">
+                    <span class="info-label">Updated:</span>
+                    <span class="info-value">{{ formatDate(backendNode()!.updated_at) }}</span>
+                  </div>
+                }
               }
             </div>
           </mat-card-content>
@@ -375,6 +378,7 @@ export class NodeInspectorComponent {
   editableMetadata: Record<string, unknown> = {};
   metadataObject: unknown = {};
   metadataExpanded = false;
+  nodeInfoExpanded = false;
 
   constructor() {
     // Watch for node changes and reset editable values

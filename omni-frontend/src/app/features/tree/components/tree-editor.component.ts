@@ -82,7 +82,7 @@ import {
 
     <!-- Recursive node template -->
     <ng-template #nodeTemplate let-node="node" let-depth="depth">
-      <div class="tree-node" [style.padding-left.px]="depth * 20">
+      <div class="tree-node" [style.padding-left.px]="depth * 5">
         
         <div class="node-row" 
              [class.selected]="selectedNodeId() === node.id"
@@ -155,7 +155,7 @@ import {
     .tree-nodes {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 0;
     }
 
     .tree-node {
@@ -166,11 +166,12 @@ import {
     .node-row {
       display: flex;
       align-items: center;
-      gap: 4px;
-      padding: 4px 8px;
+      gap: 2px;
+      padding: 1px 4px;
       border-radius: 4px;
       cursor: pointer;
       transition: background-color 0.2s;
+      min-height: 20px;
     }
 
     .node-row:hover {
@@ -185,15 +186,30 @@ import {
 
     .expand-btn {
       flex-shrink: 0;
-      width: 32px;
-      height: 32px;
+      width: 20px;
+      height: 20px;
+      line-height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .expand-btn ::ng-deep .mat-mdc-button-touch-target {
+      width: 20px;
+      height: 20px;
     }
 
     .expand-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-      color: rgba(0, 0, 0, 0.54);
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      line-height: 16px;
+      font-weight: 700;
+      color: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .node-label {
