@@ -147,7 +147,7 @@ import {
   `,
   styles: [`
     .tree-editor {
-      padding: 8px;
+      padding: 4px;
       height: 100%;
       overflow: auto;
     }
@@ -166,12 +166,12 @@ import {
     .node-row {
       display: flex;
       align-items: center;
-      gap: 2px;
-      padding: 1px 4px;
-      border-radius: 4px;
+      gap: 0;
+      padding: 0 2px;
+      border-radius: 3px;
       cursor: pointer;
-      transition: background-color 0.2s;
-      min-height: 20px;
+      transition: background-color 0.15s;
+      min-height: 16px;
     }
 
     .node-row:hover {
@@ -181,30 +181,39 @@ import {
     .node-row.selected {
       background-color: rgba(124, 92, 191, 0.15);
       border-left: 3px solid var(--omni-accent, #7c5cbf);
-      padding-left: 5px;
+      padding-left: 3px;
     }
 
-    .expand-btn {
+    /* Shared compact button styles for both expand and actions buttons */
+    .expand-btn,
+    .node-actions button {
       flex-shrink: 0;
-      width: 20px;
-      height: 20px;
-      line-height: 20px;
-      display: flex;
+      width: 26px !important;
+      height: 26px !important;
+      line-height: 26px;
+      display: flex !important;
       align-items: center;
       justify-content: center;
-      padding: 0;
+      padding: 0 !important;
+      --mdc-icon-button-state-layer-size: 26px;
     }
 
-    .expand-btn ::ng-deep .mat-mdc-button-touch-target {
-      width: 20px;
-      height: 20px;
+    .expand-btn ::ng-deep .mat-mdc-button-touch-target,
+    .node-actions button ::ng-deep .mat-mdc-button-touch-target {
+      width: 26px;
+      height: 26px;
+    }
+
+    .expand-btn ::ng-deep .mat-mdc-button-persistent-ripple,
+    .node-actions button ::ng-deep .mat-mdc-button-persistent-ripple {
+      border-radius: 3px;
     }
 
     .expand-icon {
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
-      line-height: 16px;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      line-height: 20px;
       font-weight: 700;
       color: rgba(0, 0, 0, 0.6);
       display: flex;
@@ -212,9 +221,17 @@ import {
       justify-content: center;
     }
 
+    .node-actions mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      line-height: 20px;
+    }
+
     .node-label {
       flex: 1;
       font-size: 14px;
+      line-height: 1.4;
       user-select: none;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -227,8 +244,9 @@ import {
     }
 
     .node-label-input ::ng-deep .mat-mdc-form-field-infix {
-      padding-top: 4px;
-      padding-bottom: 4px;
+      padding-top: 3px;
+      padding-bottom: 3px;
+      min-height: unset;
     }
 
     .node-actions {
