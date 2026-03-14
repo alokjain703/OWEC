@@ -441,10 +441,10 @@ export class AppComponent {
       { path: this.roleRouting.currentDashboard()?.route || '/dashboard/user', label: 'Dashboard', icon: 'dashboard', tooltip: 'Return to dashboard' },
       { path: '/schemas', label: 'Schemas', icon: 'schema', tooltip: 'Schema templates' },
       { path: `/projects/${projectId}/tree`, label: 'Tree', icon: 'account_tree', tooltip: 'Project node tree' },
-      { path: `/projects/${projectId}/characters`, label: 'Characters', icon: 'people', tooltip: 'Character entity map' },
       { path: `/projects/${projectId}/timeline`, label: 'Timeline', icon: 'timeline', tooltip: 'Chronological events' },
-      { path: `/projects/${projectId}/graph`, label: 'Graph', icon: 'hub', tooltip: 'Relationship graph' },
       { path: '/ce', label: 'Character Engine', icon: 'auto_fix_high', tooltip: 'Character Engine' },
+      // { path: `/projects/${projectId}/characters`, label: 'Characters', icon: 'people', tooltip: 'Character entity map' },
+      // { path: `/projects/${projectId}/graph`, label: 'Graph', icon: 'hub', tooltip: 'Relationship graph' },
     ];
   });
 

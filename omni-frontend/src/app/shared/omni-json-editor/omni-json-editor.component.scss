@@ -1,0 +1,28 @@
+/**
+ * omni-json-editor component styles.
+ *
+ * The parent container (host) stretches to fill its parent by default.
+ * Override the `.jsoneditor` height to control the editor's visible area.
+ */
+
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.omni-json-editor-container {
+  width: 100%;
+  height: 100%;
+}
+
+.jsoneditor {
+  height: 400px;
+
+  // Blend the jsoneditor chrome with the OMNI dark surface palette.
+  // These CSS variables are defined globally in styles.scss.
+  --jse-theme-color:            var(--omni-accent, #7c5cbf);
+  --jse-theme-color-highlight:  var(--omni-accent-light, #9f7fe0);
+  --jse-background-color:       var(--omni-surface, #1e1e2e);
+  --jse-text-color:             var(--omni-text, #e0e0e0);
+}

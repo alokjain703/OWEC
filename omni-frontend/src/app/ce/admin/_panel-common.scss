@@ -42,6 +42,19 @@ mat-paginator {
 .field-full { width: 100%; }
 .field-half { width: 100%; }
 
+.json-editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.json-field-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--omni-text-muted, rgba(255, 255, 255, 0.6));
+  letter-spacing: 0.3px;
+}
+
 .checkbox-row {
   padding: 4px 0 8px;
   display: flex;

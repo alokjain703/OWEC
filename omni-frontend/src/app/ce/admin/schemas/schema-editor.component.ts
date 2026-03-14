@@ -12,6 +12,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { Schema } from '../models/schema.model';
+import { OmniJsonEditorComponent } from '../../../shared/omni-json-editor/omni-json-editor.component';
 
 /**
  * RIGHT PANEL — Schema editor form.
@@ -30,6 +31,7 @@ import { Schema } from '../models/schema.model';
     MatIconModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    OmniJsonEditorComponent,
   ],
   template: `
     <div class="editor-panel">
@@ -63,13 +65,13 @@ import { Schema } from '../models/schema.model';
           <textarea matInput formControlName="description" rows="3"></textarea>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="field-full">
-          <mat-label>Metadata (JSON)</mat-label>
-          <textarea matInput formControlName="metadata" rows="5" placeholder='{"key": "value"}'></textarea>
-          @if (form.get('metadata')?.hasError('invalidJson')) {
-            <mat-error>Must be valid JSON</mat-error>
-          }
-        </mat-form-field>
+        <div class="field-full json-editor-field">
+          <span class="json-field-label">Metadata (JSON)</span>
+          <omni-json-editor
+            [data]="metadataObject"
+            (dataChange)="onMetadataChange($event)"
+            mode="tree" />
+        </div>
 
         @if (errorMsg) {
           <p class="error-msg">{{ errorMsg }}</p>
@@ -93,6 +95,9 @@ export class SchemaEditorComponent implements OnChanges {
   @Input() saving              = false;
   @Input() errorMsg            = '';
 
+  /** Drives the omni-json-editor [data] input. Updated in ngOnChanges and onMetadataChange. */
+  metadataObject: unknown = {};
+
   @Output() save   = new EventEmitter<Omit<Schema, 'id'> & { id: string }>();
   @Output() cancel = new EventEmitter<void>();
 
@@ -111,6 +116,7 @@ export class SchemaEditorComponent implements OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['item']) {
       if (this.item) {
+        this.metadataObject = this.item.metadata ?? {};
         this.form.patchValue({
           id:          this.item.id,
           name:        this.item.name,
@@ -119,10 +125,16 @@ export class SchemaEditorComponent implements OnChanges {
         });
         this.form.get('id')?.disable();
       } else {
+        this.metadataObject = {};
         this.form.reset({ metadata: '{}' });
         this.form.get('id')?.enable();
       }
     }
+  }
+
+  onMetadataChange(json: unknown): void {
+    this.metadataObject = json;
+    this.form.get('metadata')?.setValue(JSON.stringify(json));
   }
 
   submit(): void {
