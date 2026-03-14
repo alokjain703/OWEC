@@ -19,24 +19,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { TreeNode } from '../models/tree-node.model';
+import { BackendNode, TreeNode } from '../models/tree-node.model';
 import { OmniApiService } from '../../../core/services/omni-api.service';
 import { OmniJsonEditorComponent } from '../../../shared/omni-json-editor/omni-json-editor.component';
 
-interface BackendNode {
-  id: string;
-  project_id: string;
-  parent_id?: string;
-  depth: number;
-  order_index: number;
-  node_role: string;
-  title?: string;
-  content?: string;
-  metadata: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-}
+// BackendNode is now imported from tree-node.model (removed local declaration)
 
 /**
  * Node Inspector Component
@@ -57,6 +46,7 @@ interface BackendNode {
     MatIconModule,
     MatDividerModule,
     MatSelectModule,
+    MatSlideToggleModule,
     MatSnackBarModule,
     OmniJsonEditorComponent,
   ],
@@ -98,7 +88,7 @@ interface BackendNode {
               <input matInput [value]="backendNode()?.depth || 0" disabled>
             </mat-form-field>
 
-            <!-- Content -->
+                        <!-- Content -->
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Content</mat-label>
               <textarea 
@@ -108,6 +98,35 @@ interface BackendNode {
                 placeholder="Enter node content">
               </textarea>
             </mat-form-field>
+
+            <!-- Content Format -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Content Format</mat-label>
+              <mat-select [(ngModel)]="editableContentFormat">
+                <mat-option value="html">HTML</mat-option>
+                <mat-option value="markdown">Markdown</mat-option>
+                <mat-option value="json">JSON</mat-option>
+                <mat-option value="plain">Plain Text</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <!-- Path (read-only) -->
+            @if (backendNode()?.path) {
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Path</mat-label>
+                <input matInput [value]="backendNode()!.path" readonly>
+              </mat-form-field>
+            }
+
+            <!-- Has Children (read-only indicator) -->
+            <div class="has-children-row">
+              <mat-slide-toggle
+                [checked]="backendNode()?.has_children ?? false"
+                disabled
+                color="primary">
+                Has Children
+              </mat-slide-toggle>
+            </div>
 
             <mat-divider></mat-divider>
 
@@ -318,6 +337,10 @@ interface BackendNode {
       min-width: 100px;
     }
 
+    .has-children-row {
+      padding: 8px 0 16px 0;
+    }
+
     mat-divider {
       margin: 16px 0;
     }
@@ -348,6 +371,7 @@ export class NodeInspectorComponent {
   // Editable state
   editableTitle = '';
   editableContent = '';
+  editableContentFormat = 'html';
   editableMetadata: Record<string, unknown> = {};
   metadataObject: unknown = {};
   metadataExpanded = false;
@@ -370,11 +394,13 @@ export class NodeInspectorComponent {
     if (backend) {
       this.editableTitle = backend.title || '';
       this.editableContent = backend.content || '';
+      this.editableContentFormat = backend.content_format || 'html';
       this.editableMetadata = { ...backend.metadata };
       this.metadataObject = { ...backend.metadata };
     } else {
       this.editableTitle = '';
       this.editableContent = '';
+      this.editableContentFormat = 'html';
       this.editableMetadata = {};
       this.metadataObject = {};
     }
@@ -394,6 +420,7 @@ export class NodeInspectorComponent {
       await this.api.updateNode(backend.id, {
         title: this.editableTitle,
         content: this.editableContent,
+        content_format: this.editableContentFormat,
         metadata: this.editableMetadata,
       }).toPromise();
 

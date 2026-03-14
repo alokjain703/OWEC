@@ -15,6 +15,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatMenuModule } from '@angular/material/menu';
 import {
+  BackendNode,
   TreeNode,
   NodeCreatedEvent,
   NodeDeletedEvent,
@@ -64,10 +65,10 @@ import {
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="tree-editor">
+        <div class="tree-editor">
       @if (nodes().length > 0) {
         <div class="tree-nodes">
-          @for (node of nodes(); track node.id) {
+          @for (node of sortedRootNodes(); track node.id) {
             <ng-container *ngTemplateOutlet="nodeTemplate; context: { node: node, depth: 0 }" />
           }
         </div>
@@ -87,13 +88,13 @@ import {
              [class.selected]="selectedNodeId() === node.id"
              (click)="selectNode(node)">
           
-          <!-- Expand/collapse button -->
+                <!-- Expand/collapse button -->
           <button mat-icon-button 
                   class="expand-btn"
                   (click)="toggleExpand(node); $event.stopPropagation()"
-                  [disabled]="!node.children || node.children.length === 0">
+                  [disabled]="!canExpand(node)">
             <mat-icon class="expand-icon">
-              {{ !node.children?.length ? '' : (node.expanded ? 'expand_more' : 'chevron_right') }}
+              {{ !canExpand(node) ? '' : (node.expanded ? 'expand_more' : 'chevron_right') }}
             </mat-icon>
           </button>
 
@@ -135,9 +136,9 @@ import {
           </div>
         </div>
 
-        <!-- Children (recursive) -->
+                <!-- Children (recursive) -->
         @if (node.expanded && node.children) {
-          @for (child of node.children; track child.id) {
+          @for (child of sortedChildren(node); track child.id) {
             <ng-container *ngTemplateOutlet="nodeTemplate; context: { node: child, depth: depth + 1 }" />
           }
         }
@@ -259,6 +260,27 @@ export class TreeEditorComponent {
   selectedNodeId = signal<string | null>(null);
   editingNodeId = signal<string | null>(null);
   editingLabel = '';
+
+  /** Nodes sorted by order_key from BackendNode data (falls back to original order). */
+  sortedRootNodes = computed(() =>
+    [...this.nodes()].sort((a, b) => this._orderKey(a) - this._orderKey(b))
+  );
+
+  private _orderKey(node: TreeNode): number {
+    return (node.data as BackendNode | undefined)?.order_key ?? 0;
+  }
+
+  /** Whether a node can be expanded (has backend children flag OR actual children). */
+  canExpand(node: TreeNode): boolean {
+    const backendHasChildren = (node.data as BackendNode | undefined)?.has_children;
+    return backendHasChildren === true || (node.children?.length ?? 0) > 0;
+  }
+
+  /** Children sorted by order_key. */
+  sortedChildren(node: TreeNode): TreeNode[] {
+    if (!node.children) return [];
+    return [...node.children].sort((a, b) => this._orderKey(a) - this._orderKey(b));
+  }
 
   // ─── Node Selection ─────────────────────────────────────────────────────────
 

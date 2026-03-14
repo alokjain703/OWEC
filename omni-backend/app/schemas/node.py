@@ -12,18 +12,20 @@ class NodeCreate(BaseModel):
     node_role: str
     title: Optional[str] = None
     content: Optional[str] = None
+    content_format: str = "html"
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class NodeUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
+    content_format: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
 
 class NodeMove(BaseModel):
     new_parent_id: Optional[uuid.UUID] = None
-    new_order_index: int
+    new_order_key: Optional[float] = None  # fractional position; computed server-side if omitted
 
 
 class NodeReorder(BaseModel):
@@ -38,9 +40,13 @@ class NodeOut(BaseModel):
     parent_id: Optional[uuid.UUID]
     depth: int
     order_index: int
+    order_key: Optional[float]
     node_role: str
     title: Optional[str]
     content: Optional[str]
+    content_format: str
+    path: Optional[str]
+    has_children: bool
     # ORM stores this as metadata_ to avoid conflict with SQLAlchemy's MetaData
     metadata: Dict[str, Any] = Field(
         default_factory=dict,

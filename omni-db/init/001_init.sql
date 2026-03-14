@@ -76,10 +76,15 @@ CREATE TABLE IF NOT EXISTS nodes (
 
     depth       INT         NOT NULL,
     order_index INT         NOT NULL,
+    order_key   NUMERIC,
     node_role   TEXT        NOT NULL,   -- 'universe' | 'collection' | 'major_unit' | 'atomic_unit'
 
     title       TEXT,
     content     TEXT,
+    content_format TEXT     NOT NULL DEFAULT 'html',
+
+    path        TEXT,
+    has_children BOOLEAN    NOT NULL DEFAULT FALSE,
 
     metadata    JSONB       NOT NULL DEFAULT '{}'::jsonb,
 
@@ -91,6 +96,8 @@ CREATE INDEX IF NOT EXISTS idx_nodes_project_id  ON nodes(project_id);
 CREATE INDEX IF NOT EXISTS idx_nodes_parent_id   ON nodes(parent_id);
 CREATE INDEX IF NOT EXISTS idx_nodes_depth       ON nodes(depth);
 CREATE INDEX IF NOT EXISTS idx_nodes_node_role   ON nodes(node_role);
+CREATE INDEX IF NOT EXISTS idx_nodes_path        ON nodes(path);
+CREATE INDEX IF NOT EXISTS idx_nodes_order_key   ON nodes(project_id, parent_id, order_key);
 CREATE INDEX IF NOT EXISTS idx_nodes_metadata    ON nodes USING GIN (metadata);
 
 -- -------------------------------------------------------

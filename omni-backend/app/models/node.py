@@ -2,7 +2,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -24,10 +24,15 @@ class Node(Base):
 
     depth: Mapped[int] = mapped_column(Integer, nullable=False)
     order_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    order_key: Mapped[float | None] = mapped_column(Numeric, nullable=True)
     node_role: Mapped[str] = mapped_column(String, nullable=False)  # universe|collection|major_unit|atomic_unit
 
     title: Mapped[str | None] = mapped_column(Text, nullable=True)
     content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content_format: Mapped[str] = mapped_column(Text, nullable=False, default="html", server_default="html")
+
+    path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    has_children: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     metadata_: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict)
 
@@ -52,5 +57,7 @@ class Node(Base):
         Index("idx_nodes_parent_id", "parent_id"),
         Index("idx_nodes_depth", "depth"),
         Index("idx_nodes_node_role", "node_role"),
+        Index("idx_nodes_path", "path"),
+        Index("idx_nodes_order_key", "project_id", "parent_id", "order_key"),
         Index("idx_nodes_metadata", "metadata", postgresql_using="gin"),
     )
