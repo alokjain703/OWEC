@@ -60,6 +60,7 @@ interface MetadataFieldDef {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="inspector-container">
+      <div class="inspector-scroll">
       @if (!node()) {
         <div class="no-selection">
           <mat-icon class="no-selection-icon">info_outline</mat-icon>
@@ -127,7 +128,8 @@ interface MetadataFieldDef {
               <mat-label>Content</mat-label>
               <textarea 
                 matInput 
-                [(ngModel)]="editableContent"
+                [ngModel]="editableContent"
+                (ngModelChange)="editableContent = $event; contentChange.emit($event)"
                 rows="4"
                 placeholder="Enter node content">
               </textarea>
@@ -147,49 +149,6 @@ interface MetadataFieldDef {
             
 
             <mat-divider></mat-divider>
-
-            <!-- Stats Section (read-only, system-computed) -->
-            @if (getStats()) {
-              <div class="stats-section">
-                <h3>
-                  <mat-icon>bar_chart</mat-icon>
-                  Writing Stats
-                </h3>
-                <div class="stats-pills-row">
-                  <div class="stat-pill">
-                    <span class="stat-pill-value">{{ getStats()!.word_count | number }}</span>
-                    <span class="stat-pill-label">words
-                      @if (getTargetWords(); as target) {
-                        <span class="stat-pill-target">&nbsp;/ {{ target | number }}</span>
-                      }
-                    </span>
-                  </div>
-                  <div class="stat-pill">
-                    <span class="stat-pill-value">{{ getStats()!.reading_time_minutes }}</span>
-                    <span class="stat-pill-label">min read</span>
-                  </div>
-                  <div class="stat-pill">
-                    <span class="stat-pill-value">{{ getStats()!.sentence_count | number }}</span>
-                    <span class="stat-pill-label">sentences</span>
-                  </div>
-                  <div class="stat-pill">
-                    <span class="stat-pill-value">{{ getStats()!.paragraph_count | number }}</span>
-                    <span class="stat-pill-label">paragraphs</span>
-                  </div>
-                </div>
-                @if (getTargetWords(); as target) {
-                  <div class="progress-bar-wrap">
-                    <div class="progress-bar-fill"
-                         [style.width.%]="getProgress()">
-                    </div>
-                  </div>
-                  <div class="progress-label">
-                    {{ getProgress() }}% of {{ target | number }} word goal
-                  </div>
-                }
-              </div>
-              <mat-divider></mat-divider>
-            }
 
             <!-- Metadata Section -->
             <div class="metadata-section">
@@ -300,6 +259,49 @@ interface MetadataFieldDef {
 
             <mat-divider></mat-divider>
 
+            <!-- Stats Section (read-only, system-computed) -->
+            @if (getStats()) {
+              <div class="stats-section">
+                <h3>
+                  <mat-icon>bar_chart</mat-icon>
+                  Writing Stats
+                </h3>
+                <div class="stats-pills-row">
+                  <div class="stat-pill">
+                    <span class="stat-pill-value">{{ getStats()!.word_count | number }}</span>
+                    <span class="stat-pill-label">words
+                      @if (getTargetWords(); as target) {
+                        <span class="stat-pill-target">&nbsp;/ {{ target | number }}</span>
+                      }
+                    </span>
+                  </div>
+                  <div class="stat-pill">
+                    <span class="stat-pill-value">{{ getStats()!.reading_time_minutes }}</span>
+                    <span class="stat-pill-label">min read</span>
+                  </div>
+                  <div class="stat-pill">
+                    <span class="stat-pill-value">{{ getStats()!.sentence_count | number }}</span>
+                    <span class="stat-pill-label">sentences</span>
+                  </div>
+                  <div class="stat-pill">
+                    <span class="stat-pill-value">{{ getStats()!.paragraph_count | number }}</span>
+                    <span class="stat-pill-label">paragraphs</span>
+                  </div>
+                </div>
+                @if (getTargetWords(); as target) {
+                  <div class="progress-bar-wrap">
+                    <div class="progress-bar-fill"
+                         [style.width.%]="getProgress()">
+                    </div>
+                  </div>
+                  <div class="progress-label">
+                    {{ getProgress() }}% of {{ target | number }} word goal
+                  </div>
+                }
+              </div>
+              <mat-divider></mat-divider>
+            }
+
             <!-- Node Info -->
             <div class="node-info">
               <h3 class="collapsible-header" (click)="nodeInfoExpanded = !nodeInfoExpanded">
@@ -335,48 +337,73 @@ interface MetadataFieldDef {
             </div>
           </mat-card-content>
 
-          <mat-divider></mat-divider>
-
-          <mat-card-actions class="inspector-actions">
-            <button 
-              mat-raised-button 
-              color="primary"
-              [disabled]="saving()"
-              (click)="saveNode()">
-              <mat-icon>save</mat-icon>
-              Save
-            </button>
-            <button 
-              mat-button 
-              (click)="resetChanges()">
-              <mat-icon>undo</mat-icon>
-              Reset
-            </button>
-            <button 
-              mat-button 
-              color="accent"
-              (click)="addChildNode()">
-              <mat-icon>add</mat-icon>
-              Add Child
-            </button>
-            <button 
-              mat-button 
-              color="warn"
-              [disabled]="deleting()"
-              (click)="deleteNode()">
-              <mat-icon>delete</mat-icon>
-              Delete
-            </button>
-          </mat-card-actions>
         </mat-card>
+      }
+      </div>
+
+      @if (node()) {
+        <div class="inspector-footer">
+          <button 
+            mat-raised-button 
+            color="primary"
+            [disabled]="saving()"
+            (click)="saveNode()">
+            <mat-icon>save</mat-icon>
+            Save
+          </button>
+          <button 
+            mat-button 
+            (click)="resetChanges()">
+            <mat-icon>undo</mat-icon>
+            Reset
+          </button>
+          <button 
+            mat-button 
+            color="accent"
+            (click)="addChildNode()">
+            <mat-icon>add</mat-icon>
+            Add Child
+          </button>
+          <button 
+            mat-button 
+            color="warn"
+            [disabled]="deleting()"
+            (click)="deleteNode()">
+            <mat-icon>delete</mat-icon>
+            Delete
+          </button>
+        </div>
       }
     </div>
   `,
   styles: [`
     .inspector-container {
       height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .inspector-scroll {
+      flex: 1;
       overflow-y: auto;
       padding: 16px;
+      padding-bottom: 8px;
+    }
+
+    .inspector-footer {
+      flex-shrink: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 16px;
+      border-top: 1px solid rgba(0,0,0,0.12);
+      background: white;
+    }
+
+    .inspector-footer button {
+      flex: 1 1 auto;
+      min-width: 90px;
     }
 
     .no-selection {
@@ -594,15 +621,7 @@ interface MetadataFieldDef {
     }
 
     .inspector-actions {
-      padding: 12px 16px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .inspector-actions button {
-      flex: 1 1 auto;
-      min-width: 100px;
+      display: none;
     }
 
     .has-children-row {
@@ -667,6 +686,7 @@ export class NodeInspectorComponent {
   @Output() nodeSaved          = new EventEmitter<void>();
   @Output() nodeDeleted        = new EventEmitter<void>();
   @Output() childNodeRequested = new EventEmitter<TreeNode>();
+  @Output() contentChange      = new EventEmitter<string>();
 
   // State
   saving   = signal(false);

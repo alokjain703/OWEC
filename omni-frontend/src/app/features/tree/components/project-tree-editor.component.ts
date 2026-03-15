@@ -255,7 +255,8 @@ interface Schema {
           <!-- CENTER PANEL - Content Editor -->
           <div class="content-panel">
             <omni-node-content-editor
-              [node]="selectedNode()">
+              [node]="selectedNode()"
+              [liveContent]="inspectorLiveContent()">
             </omni-node-content-editor>
           </div>
 
@@ -285,7 +286,8 @@ interface Schema {
                 [schema]="activeSchema()?.definition"
                 (nodeSaved)="handleNodeSaved()"
                 (nodeDeleted)="handleInspectorNodeDeleted()"
-                (childNodeRequested)="handleChildNodeRequested($event)">
+                (childNodeRequested)="handleChildNodeRequested($event)"
+                (contentChange)="inspectorLiveContent.set($event)">
               </omni-node-inspector>
             }
           </mat-sidenav>
@@ -598,7 +600,8 @@ export class ProjectTreeEditorComponent implements OnInit {
   project = signal<Project | null>(null);
   treeNodes = signal<TreeNode[]>([]);
   backendNodes = signal<BackendNode[]>([]);
-  selectedNode = signal<TreeNode | null>(null);
+  selectedNode        = signal<TreeNode | null>(null);
+  inspectorLiveContent = signal<string | null>(null);
   activeSchema = signal<Schema | null>(null);
   
   // Schema initialization state
@@ -851,6 +854,7 @@ export class ProjectTreeEditorComponent implements OnInit {
       this.closeNodeEditor();
     }
     this.selectedNode.set(node);
+    this.inspectorLiveContent.set(null);
     this.nodeSelected.emit(node);
   }
 

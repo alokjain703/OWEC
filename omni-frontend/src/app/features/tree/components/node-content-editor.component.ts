@@ -55,8 +55,8 @@ interface BackendNode {
           </mat-card-header>
           <mat-card-content>
             <div class="content-preview">
-              @if (getBackendNode()?.content) {
-                <p>{{ getBackendNode()?.content }}</p>
+              @if (displayContent()) {
+                <p>{{ displayContent() }}</p>
               } @else {
                 <p class="no-content">No content yet. Use the inspector panel to add content.</p>
               }
@@ -172,9 +172,16 @@ interface BackendNode {
   `],
 })
 export class NodeContentEditorComponent {
-  node = input<TreeNode | null>(null);
+  node        = input<TreeNode | null>(null);
+  liveContent = input<string | null>(null);
 
   getBackendNode(): BackendNode | undefined {
     return this.node()?.data as BackendNode | undefined;
+  }
+
+  displayContent(): string {
+    const live = this.liveContent();
+    if (live !== null) return live;
+    return this.getBackendNode()?.content ?? '';
   }
 }
