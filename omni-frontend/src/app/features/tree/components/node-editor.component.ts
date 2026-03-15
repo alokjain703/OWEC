@@ -81,7 +81,8 @@ interface Node {
       <div class="editor-header">
         <h2>
           <mat-icon>{{ mode === 'create' ? 'add_circle' : 'edit' }}</mat-icon>
-          {{ mode === 'create' ? 'Create New Node' : 'Edit Node' }}
+          {{ mode === 'create' ? 'Create New' : 'Edit' }}
+          {{ editableNode.node_role ? getRoleLabel(editableNode.node_role) : (mode === 'create' ? 'Node' : 'Node') }}
         </h2>
         <button mat-icon-button (click)="closeEditor()" matTooltip="Close">
           <mat-icon>close</mat-icon>
