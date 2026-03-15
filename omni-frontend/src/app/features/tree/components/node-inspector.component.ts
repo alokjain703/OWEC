@@ -72,7 +72,28 @@ interface MetadataFieldDef {
               <mat-icon>settings</mat-icon>
               Node Properties
             </mat-card-title>
-          </mat-card-header>
+</mat-card-header>
+
+          <!-- Role · Depth · Has Children – sub-header row -->
+          <div class="card-subheader">
+            <div class="node-chips-row">
+              <div class="node-chip role-chip">
+                <mat-icon class="chip-icon">label</mat-icon>
+                <span class="chip-label">Role</span>
+                <span class="chip-value">{{ roleLabel() }}</span>
+              </div>
+              <div class="node-chip depth-chip">
+                <mat-icon class="chip-icon">account_tree</mat-icon>
+                <span class="chip-label">Depth</span>
+                <span class="chip-value">{{ backendNode()?.depth ?? 0 }}</span>
+              </div>
+              <div class="node-chip children-chip" [class.active]="backendNode()?.has_children">
+                <mat-icon class="chip-icon">{{ backendNode()?.has_children ? 'folder' : 'folder_open' }}</mat-icon>
+                <span class="chip-value">{{ backendNode()?.has_children ? 'Has children' : 'No children' }}</span>
+              </div>
+            </div>
+            
+          </div>
 
           <mat-divider></mat-divider>
 
@@ -83,17 +104,23 @@ interface MetadataFieldDef {
               <input matInput [(ngModel)]="editableTitle" placeholder="Enter node title">
             </mat-form-field>
 
-            <!-- Role (read-only) -->
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Role</mat-label>
-              <input matInput [value]="backendNode()?.node_role || 'N/A'" disabled>
-            </mat-form-field>
-
-            <!-- Depth (read-only) -->
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Depth</mat-label>
-              <input matInput [value]="backendNode()?.depth || 0" disabled>
-            </mat-form-field>
+            <!-- Role · Depth · Has Children (compact row) -->
+            <!-- <div class="node-chips-row">
+              <div class="node-chip role-chip">
+                <mat-icon class="chip-icon">label</mat-icon>
+                <span class="chip-label">Role</span>
+                <span class="chip-value">{{ roleLabel() }}</span>
+              </div>
+              <div class="node-chip depth-chip">
+                <mat-icon class="chip-icon">account_tree</mat-icon>
+                <span class="chip-label">Depth</span>
+                <span class="chip-value">{{ backendNode()?.depth ?? 0 }}</span>
+              </div>
+              <div class="node-chip children-chip" [class.active]="backendNode()?.has_children">
+                <mat-icon class="chip-icon">{{ backendNode()?.has_children ? 'folder' : 'folder_open' }}</mat-icon>
+                <span class="chip-value">{{ backendNode()?.has_children ? 'Has children' : 'No children' }}</span>
+              </div>
+            </div> -->
 
                         <!-- Content -->
             <mat-form-field appearance="outline" class="full-width">
@@ -117,23 +144,7 @@ interface MetadataFieldDef {
               </mat-select>
             </mat-form-field>
 
-            <!-- Path (read-only) -->
-            @if (backendNode()?.path) {
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Path</mat-label>
-                <input matInput [value]="backendNode()!.path" readonly>
-              </mat-form-field>
-            }
-
-            <!-- Has Children (read-only indicator) -->
-            <div class="has-children-row">
-              <mat-slide-toggle
-                [checked]="backendNode()?.has_children ?? false"
-                disabled
-                color="primary">
-                Has Children
-              </mat-slide-toggle>
-            </div>
+            
 
             <mat-divider></mat-divider>
 
@@ -144,25 +155,26 @@ interface MetadataFieldDef {
                   <mat-icon>bar_chart</mat-icon>
                   Writing Stats
                 </h3>
-                <div class="stats-grid">
-                  <div class="stat-item">
-                    <span class="stat-value">{{ getStats()!.word_count | number }}</span>
-                    <span class="stat-label">words</span>
-                    @if (getTargetWords(); as target) {
-                      <span class="stat-target">/ {{ target | number }} goal</span>
-                    }
+                <div class="stats-pills-row">
+                  <div class="stat-pill">
+                    <span class="stat-pill-value">{{ getStats()!.word_count | number }}</span>
+                    <span class="stat-pill-label">words
+                      @if (getTargetWords(); as target) {
+                        <span class="stat-pill-target">&nbsp;/ {{ target | number }}</span>
+                      }
+                    </span>
                   </div>
-                  <div class="stat-item">
-                    <span class="stat-value">{{ getStats()!.reading_time_minutes }}</span>
-                    <span class="stat-label">min read</span>
+                  <div class="stat-pill">
+                    <span class="stat-pill-value">{{ getStats()!.reading_time_minutes }}</span>
+                    <span class="stat-pill-label">min read</span>
                   </div>
-                  <div class="stat-item">
-                    <span class="stat-value">{{ getStats()!.sentence_count | number }}</span>
-                    <span class="stat-label">sentences</span>
+                  <div class="stat-pill">
+                    <span class="stat-pill-value">{{ getStats()!.sentence_count | number }}</span>
+                    <span class="stat-pill-label">sentences</span>
                   </div>
-                  <div class="stat-item">
-                    <span class="stat-value">{{ getStats()!.paragraph_count | number }}</span>
-                    <span class="stat-label">paragraphs</span>
+                  <div class="stat-pill">
+                    <span class="stat-pill-value">{{ getStats()!.paragraph_count | number }}</span>
+                    <span class="stat-pill-label">paragraphs</span>
                   </div>
                 </div>
                 @if (getTargetWords(); as target) {
@@ -312,6 +324,13 @@ interface MetadataFieldDef {
                     <span class="info-value">{{ formatDate(backendNode()!.updated_at) }}</span>
                   </div>
                 }
+                @if (backendNode()?.path) {
+                  <div class="path-row">
+                    <mat-icon class="path-icon">route</mat-icon>
+                    <span class="path-label">Path</span>
+                    <span class="path-value">{{ backendNode()!.path }}</span>
+                  </div>
+                }
               }
             </div>
           </mat-card-content>
@@ -383,7 +402,42 @@ interface MetadataFieldDef {
     }
 
     .inspector-card mat-card-header {
-      padding: 16px;
+      padding: 16px 16px 8px;
+    }
+
+    .card-subheader {
+      padding: 0 16px 12px;
+    }
+
+    .path-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 2px 0;
+      font-size: 12px;
+      color: rgba(0,0,0,0.54);
+      overflow: hidden;
+    }
+    .path-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      color: rgba(0,0,0,0.38);
+    }
+    .path-label {
+      font-weight: 500;
+      flex-shrink: 0;
+      color: rgba(0,0,0,0.45);
+    }
+    .path-label::after { content: ':'; }
+    .path-value {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: rgba(0,0,0,0.6);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .inspector-card mat-card-title {
@@ -426,38 +480,40 @@ interface MetadataFieldDef {
     }
 
     .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
+      display: none; /* replaced by stats-pills-row */
+    }
+
+    /* Stats pills row */
+    .stats-pills-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
       margin-bottom: 10px;
     }
-
-    .stat-item {
-      background: #f5f5f5;
-      border-radius: 6px;
-      padding: 8px 10px;
+    .stat-pill {
       display: flex;
-      flex-direction: column;
-      gap: 1px;
+      align-items: baseline;
+      gap: 4px;
+      background: #f5f5f5;
+      border: 1px solid #e0e0e0;
+      border-radius: 14px;
+      padding: 3px 10px;
+      white-space: nowrap;
     }
-
-    .stat-value {
-      font-size: 18px;
-      font-weight: 600;
-      color: rgba(0, 0, 0, 0.87);
-      line-height: 1.2;
+    .stat-pill-value {
+      font-size: 13px;
+      font-weight: 700;
+      color: rgba(0,0,0,0.87);
     }
-
-    .stat-label {
+    .stat-pill-label {
       font-size: 11px;
-      color: rgba(0, 0, 0, 0.5);
+      color: rgba(0,0,0,0.5);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.03em;
     }
-
-    .stat-target {
-      font-size: 11px;
+    .stat-pill-target {
       color: #3f51b5;
+      font-weight: 600;
     }
 
     .progress-bar-wrap {
@@ -553,6 +609,47 @@ interface MetadataFieldDef {
       padding: 8px 0 16px 0;
     }
 
+    /* Node chips row: Role · Depth · Has Children */
+    .node-chips-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .node-chip {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #f5f5f5;
+      border: 1px solid #e0e0e0;
+      border-radius: 16px;
+      padding: 4px 10px 4px 6px;
+      font-size: 12px;
+      color: rgba(0,0,0,0.7);
+      flex-shrink: 0;
+    }
+    .node-chip.active {
+      background: #e8f5e9;
+      border-color: #a5d6a7;
+      color: #2e7d32;
+    }
+    .chip-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+      color: rgba(0,0,0,0.45);
+    }
+    .node-chip.active .chip-icon { color: #2e7d32; }
+    .chip-label {
+      font-weight: 500;
+      color: rgba(0,0,0,0.45);
+      margin-right: 2px;
+    }
+    .chip-value {
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+
     mat-divider {
       margin: 16px 0;
     }
@@ -579,6 +676,24 @@ export class NodeInspectorComponent {
   backendNode = computed(() => this.node()?.data as BackendNode | undefined);
 
   // ─ Stats helpers (read-only; no user editing) ─────────────────────────
+
+  private static readonly _ROLE_LABELS: Record<string, string> = {
+    book:    'Book',
+    part:    'Part',
+    chapter: 'Chapter',
+    section: 'Section',
+    scene:   'Scene',
+    unknown: 'Unknown',
+  };
+
+  roleLabel(): string {
+    const role = this.backendNode()?.node_role;
+    if (!role) return 'N/A';
+    // Prefer the schema's human-readable label (e.g. "Book" for "major_unit")
+    return this.schema()?.roles?.[role]?.label
+      ?? NodeInspectorComponent._ROLE_LABELS[role]
+      ?? role;
+  }
 
   getStats() {
     return this.backendNode()?.metadata?.stats ?? null;
