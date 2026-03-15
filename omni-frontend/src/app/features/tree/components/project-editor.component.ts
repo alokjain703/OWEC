@@ -67,7 +67,9 @@ interface ProjectPayload {
           </div>
         </mat-card-title>
       </mat-card-header>
-
+      
+      <!-- ----------------- ->
+      <!-- Card content is conditionally rendered based on loading state and mode -->
       <mat-card-content>
         @if (loading()) {
           <div class="loading-state">

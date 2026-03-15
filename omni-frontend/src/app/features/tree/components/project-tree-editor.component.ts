@@ -1,6 +1,7 @@
 import {
   Component,
   OnInit,
+  HostListener,
   input,
   output,
   signal,
@@ -21,6 +22,7 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { OmniApiService } from '../../../core/services/omni-api.service';
 import { AuthStateService } from '../../../core/services/auth-state.service';
 import { SchemaLoaderService, SchemaOption } from '../services/schema-loader.service';
@@ -102,6 +104,7 @@ interface Schema {
     MatMenuModule,
     MatSnackBarModule,
     MatSidenavModule,
+    MatTooltipModule,
     TreeEditorComponent,
     NodeInspectorComponent,
     NodeContentEditorComponent,
@@ -194,10 +197,12 @@ interface Schema {
         </div>
 
         <!-- Three-Panel Layout -->
-        <mat-sidenav-container class="editor-container">
-          
+        <div class="editor-container" [class.is-dragging]="isDragging()">
+
           <!-- LEFT PANEL - Tree Editor -->
-          <mat-sidenav mode="side" opened class="tree-panel">
+          <div class="panel tree-panel"
+               [style.width.px]="leftPanelWidth()"
+               [class.panel-hidden]="centerMaximized()">
             @if (treeNodes().length === 0) {
               <!-- Schema selection for empty project -->
               <div class="schema-selection">
@@ -250,24 +255,43 @@ interface Schema {
                 (nodeImportFromDocument)="handleImportFromDocument($event)">
               </omni-tree-editor>
             }
-          </mat-sidenav>
+          </div>
+
+          <!-- LEFT RESIZE HANDLE -->
+          <div class="resize-handle"
+               [class.panel-hidden]="centerMaximized()"
+               [class.active]="isDragging()"
+               (mousedown)="startDrag('left', $event)">
+          </div>
 
           <!-- CENTER PANEL - Content Editor -->
           <div class="content-panel">
+            <!-- Max / Restore toggle -->
+            <button mat-icon-button
+                    class="center-max-btn"
+                    [matTooltip]="centerMaximized() ? 'Restore panels' : 'Maximize content'"
+                    (click)="toggleCenterMax()">
+              <mat-icon>{{ centerMaximized() ? 'close_fullscreen' : 'open_in_full' }}</mat-icon>
+            </button>
             <omni-node-content-editor
               [node]="selectedNode()"
               [liveContent]="inspectorLiveContent()">
             </omni-node-content-editor>
           </div>
 
+          <!-- RIGHT RESIZE HANDLE -->
+          @if (selectedNode() || editorOpen()) {
+            <div class="resize-handle"
+                 [class.panel-hidden]="centerMaximized()"
+                 [class.active]="isDragging()"
+                 (mousedown)="startDrag('right', $event)">
+            </div>
+          }
+
           <!-- RIGHT PANEL - Inspector or Node Editor -->
-          <mat-sidenav
-            position="end"
-            mode="side"
-            [opened]="selectedNode() !== null"
-            [class.inspector-panel]="!editorOpen()"
-            [class.node-editor-panel]="editorOpen()">
-            
+          <div class="panel right-panel"
+               [style.width.px]="rightPanelWidth()"
+               [class.panel-hidden]="centerMaximized() || (!selectedNode() && !editorOpen())">
             @if (editorOpen()) {
               <!-- Node Editor -->
               <omni-node-editor
@@ -290,9 +314,9 @@ interface Schema {
                 (contentChange)="inspectorLiveContent.set($event)">
               </omni-node-inspector>
             }
-          </mat-sidenav>
+          </div>
 
-        </mat-sidenav-container>
+        </div>
       }
     </div>
 
@@ -448,30 +472,78 @@ interface Schema {
     /* Three-Panel Layout */
     .editor-container {
       flex: 1;
-      min-height: 0; /* Important for flex children with scrolling */
+      min-height: 0;
+      display: flex;
+      flex-direction: row;
+      overflow: hidden;
+    }
+
+    /* Disable text selection and smooth transitions while dragging */
+    .editor-container.is-dragging {
+      user-select: none;
+      cursor: col-resize;
+    }
+    .editor-container.is-dragging .panel {
+      transition: none !important;
+    }
+
+    .panel {
+      height: 100%;
+      flex-shrink: 0;
+      overflow: hidden;
+      transition: width 0.25s ease;
+    }
+
+    .panel.panel-hidden {
+      width: 0 !important;
+      border: none !important;
     }
 
     .tree-panel {
-      width: 300px;
       border-right: 1px solid rgba(0, 0, 0, 0.12);
     }
 
-    mat-sidenav[position="end"] {
+    .right-panel {
       border-left: 1px solid rgba(0, 0, 0, 0.12);
-      transition: width 0.3s ease;
     }
 
-    mat-sidenav[position="end"].inspector-panel {
-      width: 525px;
+    .resize-handle {
+      width: 5px;
+      flex-shrink: 0;
+      cursor: col-resize;
+      background: transparent;
+      position: relative;
+      z-index: 20;
+      transition: background 0.15s;
     }
 
-    mat-sidenav[position="end"].node-editor-panel {
-      width: 525px;
+    .resize-handle:hover,
+    .resize-handle.active {
+      background: rgba(102, 126, 234, 0.4);
+    }
+
+    .resize-handle.panel-hidden {
+      display: none;
     }
 
     .content-panel {
+      flex: 1;
+      min-width: 0;
       height: 100%;
       background: #fafafa;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .center-max-btn {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      z-index: 10;
+      background: rgba(255,255,255,0.85);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+      border-radius: 50%;
     }
 
     .panel-header {
@@ -600,8 +672,54 @@ export class ProjectTreeEditorComponent implements OnInit {
   project = signal<Project | null>(null);
   treeNodes = signal<TreeNode[]>([]);
   backendNodes = signal<BackendNode[]>([]);
-  selectedNode        = signal<TreeNode | null>(null);
+  selectedNode         = signal<TreeNode | null>(null);
   inspectorLiveContent = signal<string | null>(null);
+
+  // ─── Resizable panels ───────────────────────────────────────────────────────
+  readonly DEFAULT_LEFT_WIDTH  = 300;
+  readonly DEFAULT_RIGHT_WIDTH = 525;
+  leftPanelWidth   = signal(300);
+  rightPanelWidth  = signal(525);
+  centerMaximized  = signal(false);
+  isDragging       = signal(false);
+
+  private _dragSide: 'left' | 'right' | null = null;
+  private _dragStartX    = 0;
+  private _dragStartWidth = 0;
+
+  startDrag(side: 'left' | 'right', event: MouseEvent): void {
+    event.preventDefault();
+    this._dragSide       = side;
+    this._dragStartX     = event.clientX;
+    this._dragStartWidth = side === 'left' ? this.leftPanelWidth() : this.rightPanelWidth();
+    this.isDragging.set(true);
+  }
+
+  @HostListener('document:mousemove', ['$event'])
+  onGlobalMouseMove(event: MouseEvent): void {
+    if (!this._dragSide) return;
+    const delta   = event.clientX - this._dragStartX;
+    const MIN     = 150;
+    const MAX     = 700;
+    if (this._dragSide === 'left') {
+      this.leftPanelWidth.set(Math.max(MIN, Math.min(MAX, this._dragStartWidth + delta)));
+    } else {
+      this.rightPanelWidth.set(Math.max(MIN, Math.min(MAX, this._dragStartWidth - delta)));
+    }
+  }
+
+  @HostListener('document:mouseup')
+  onGlobalMouseUp(): void {
+    if (this._dragSide) {
+      this._dragSide = null;
+      this.isDragging.set(false);
+    }
+  }
+
+  toggleCenterMax(): void {
+    this.centerMaximized.set(!this.centerMaximized());
+  }
+  // ────────────────────────────────────────────────────────────────────────────
   activeSchema = signal<Schema | null>(null);
   
   // Schema initialization state
